@@ -9,7 +9,145 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          storyteller_points: number | null
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          storyteller_points?: number | null
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          storyteller_points?: number | null
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
+      stories: {
+        Row: {
+          audio_url: string | null
+          content: Json
+          created_at: string | null
+          cultural_insights: string[] | null
+          id: string
+          image_urls: string[] | null
+          is_public: boolean | null
+          location: string
+          title: string
+          updated_at: string | null
+          upvotes: number | null
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          content: Json
+          created_at?: string | null
+          cultural_insights?: string[] | null
+          id?: string
+          image_urls?: string[] | null
+          is_public?: boolean | null
+          location: string
+          title: string
+          updated_at?: string | null
+          upvotes?: number | null
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          content?: Json
+          created_at?: string | null
+          cultural_insights?: string[] | null
+          id?: string
+          image_urls?: string[] | null
+          is_public?: boolean | null
+          location?: string
+          title?: string
+          updated_at?: string | null
+          upvotes?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      story_interactions: {
+        Row: {
+          choices_made: Json | null
+          completed_at: string | null
+          id: string
+          story_id: string
+          user_id: string
+        }
+        Insert: {
+          choices_made?: Json | null
+          completed_at?: string | null
+          id?: string
+          story_id: string
+          user_id: string
+        }
+        Update: {
+          choices_made?: Json | null
+          completed_at?: string | null
+          id?: string
+          story_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_interactions_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_votes: {
+        Row: {
+          created_at: string | null
+          id: string
+          story_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          story_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          story_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_votes_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

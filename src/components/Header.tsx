@@ -1,8 +1,15 @@
 
-import { Share, Users, Search } from "lucide-react";
+import { Share, Users, Search, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
+  const { signOut, user } = useAuth();
+
+  const handleSignOut = () => {
+    signOut();
+  };
+
   return (
     <header className="sticky top-0 z-50 glass-card border-b border-mystical-accent/20 px-4 py-3 mb-6">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
@@ -38,6 +45,16 @@ const Header = () => {
           <Button variant="ghost" size="sm">
             <Share className="w-4 h-4" />
           </Button>
+          {user && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="text-mystical-accent hover:text-mystical-accent/80"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          )}
         </div>
       </div>
     </header>
