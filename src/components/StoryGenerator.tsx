@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Loader2, Sparkles, Image } from "lucide-react";
+import { Loader2, Sparkles, Image, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
