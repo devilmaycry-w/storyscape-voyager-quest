@@ -48,7 +48,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           image_urls,
           content,
           user_id,
-          profiles!inner(username)
+          profiles(username)
         `)
         .eq('is_public', true);
 
@@ -77,11 +77,11 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
       
       console.log('Raw data from Supabase:', data);
       
-      // Transform the data to match our Story interface
+      // Transform the data to match our Story interface with proper null handling
       const transformedData = (data || []).map(item => ({
         ...item,
-        profiles: item.profiles && typeof item.profiles === 'object' 
-          ? { username: item.profiles.username }
+        profiles: item.profiles && typeof item.profiles === 'object' && !Array.isArray(item.profiles)
+          ? { username: item.profiles.username || 'Anonymous' }
           : null
       })) as Story[];
       
