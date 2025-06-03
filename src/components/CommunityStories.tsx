@@ -60,7 +60,14 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
 
       const { data, error } = await query.limit(9);
       if (error) throw error;
-      return data as Story[];
+      
+      // Transform the data to match our Story interface
+      return (data || []).map(item => ({
+        ...item,
+        profiles: item.profiles && typeof item.profiles === 'object' && 'username' in item.profiles 
+          ? { username: item.profiles.username }
+          : null
+      })) as Story[];
     }
   });
 
