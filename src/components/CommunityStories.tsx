@@ -50,8 +50,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           created_at,
           image_urls,
           content,
-          user_id,
-          user_details:profiles!stories_user_id_fkey(username)
+          user_id
         `)
         .eq('is_public', true);
 
@@ -266,7 +265,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4 text-mystical-accent" />
                     <span className="text-white/70 text-sm">
-                      by {story.user_details?.username || 'Anonymous'}
+                      Anonymous
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
