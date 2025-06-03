@@ -64,7 +64,10 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
       // Transform the data to match our Story interface
       return (data || []).map(item => ({
         ...item,
-        profiles: item.profiles && typeof item.profiles === 'object' && 'username' in item.profiles 
+        profiles: item.profiles && 
+                 typeof item.profiles === 'object' && 
+                 item.profiles !== null && 
+                 'username' in item.profiles 
           ? { username: item.profiles.username }
           : null
       })) as Story[];
