@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -12,6 +11,10 @@ interface CommunityStoriesProps {
   isVisible: boolean;
 }
 
+interface Profile {
+  username: string;
+}
+
 interface Story {
   id: string;
   title: string;
@@ -19,11 +22,13 @@ interface Story {
   upvotes: number;
   created_at: string;
   image_urls: string[];
-  content: any;
+  content: {
+    segments?: Array<{
+      text: string;
+    }>;
+  };
   user_id: string;
-  profiles?: {
-    username: string;
-  } | null;
+  profiles: Profile | null;
 }
 
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
@@ -52,7 +57,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         `)
         .eq('is_public', true);
 
-      // Apply different sorting based on filter
       switch (filter) {
         case 'popular':
           query = query.order('upvotes', { ascending: false });
@@ -61,7 +65,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           query = query.order('created_at', { ascending: false });
           break;
         case 'trending':
-          // For trending, we'll use a combination of recent creation and upvotes
           query = query
             .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
             .order('upvotes', { ascending: false });
@@ -75,22 +78,13 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         throw error;
       }
       
-      console.log('Raw data from Supabase:', data);
-      
-      // Transform the data to match our Story interface with proper null handling
-      const transformedData = (data || []).map(item => ({
+      return (data || []).map(item => ({
         ...item,
-        profiles: item.profiles && typeof item.profiles === 'object' && !Array.isArray(item.profiles)
-          ? { username: item.profiles.username || 'Anonymous' }
-          : null
+        profiles: item.profiles as Profile | null
       })) as Story[];
-      
-      console.log('Transformed stories:', transformedData);
-      return transformedData;
     }
   });
 
-  // Log any errors
   useEffect(() => {
     if (error) {
       console.error('Query error:', error);
@@ -113,7 +107,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
     }
 
     try {
-      // Check if user already voted
       const { data: existingVote } = await supabase
         .from('story_votes')
         .select('*')
@@ -123,7 +116,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
 
       if (existingVote) {
         if (existingVote.vote_type === 'upvote') {
-          // Remove upvote
           await supabase
             .from('story_votes')
             .delete()
@@ -131,7 +123,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           
           await supabase.rpc('decrement_upvotes', { story_id: storyId });
         } else {
-          // Change downvote to upvote
           await supabase
             .from('story_votes')
             .update({ vote_type: 'upvote' })
@@ -140,7 +131,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           await supabase.rpc('increment_upvotes', { story_id: storyId });
         }
       } else {
-        // Add new upvote
         await supabase
           .from('story_votes')
           .insert({
@@ -152,7 +142,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         await supabase.rpc('increment_upvotes', { story_id: storyId });
       }
 
-      // Refresh the stories data
       queryClient.invalidateQueries({ queryKey: ['stories'] });
       
       toast({
@@ -180,7 +169,6 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
     }
 
     try {
-      // Record story interaction
       await supabase
         .from('story_interactions')
         .insert({
@@ -276,9 +264,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
                 </div>
                 
                 <p className="text-white/80 text-sm line-clamp-2">
-                  {typeof story.content === 'object' && story.content?.segments?.[0]?.text 
-                    ? story.content.segments[0].text 
-                    : "An enchanting story awaits..."}
+                  {story.content?.segments?.[0]?.text || "An enchanting story awaits..."}
                 </p>
                 
                 <div className="flex items-center justify-between pt-2 border-t border-white/10">
