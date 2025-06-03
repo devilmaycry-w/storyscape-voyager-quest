@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { Share, Users, Search, LogOut } from "lucide-react";
+import { Share, Users, Search, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import SearchModal from "./SearchModal";
@@ -8,6 +7,7 @@ import ExploreModal from "./ExploreModal";
 import CommunityModal from "./CommunityModal";
 import CreateStoryModal from "./CreateStoryModal";
 import ShareModal from "./ShareModal";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface HeaderProps {
   onLocationSelect?: (location: string) => void;
@@ -20,6 +20,7 @@ const Header = ({ onLocationSelect }: HeaderProps) => {
   const [communityOpen, setCommunityOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleSignOut = () => {
     signOut();
@@ -30,6 +31,55 @@ const Header = ({ onLocationSelect }: HeaderProps) => {
       onLocationSelect(location);
     }
   };
+
+  const MobileMenu = () => (
+    <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+      <SheetContent side="right" className="w-[300px] sm:w-[400px] bg-mystical-primary/95 backdrop-blur-lg border-none">
+        <nav className="flex flex-col gap-4 mt-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setExploreOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full justify-start text-white hover:text-mystical-accent"
+          >
+            Explore
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setCommunityOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full justify-start text-white hover:text-mystical-accent"
+          >
+            Community
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setCreateOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full justify-start text-white hover:text-mystical-accent"
+          >
+            Create
+          </Button>
+          <Button 
+            variant="ghost" 
+            onClick={() => {
+              setSearchOpen(true);
+              setMobileMenuOpen(false);
+            }}
+            className="w-full justify-start text-white hover:text-mystical-accent"
+          >
+            Search
+          </Button>
+        </nav>
+      </SheetContent>
+    </Sheet>
+  );
 
   return (
     <>
@@ -99,6 +149,14 @@ const Header = ({ onLocationSelect }: HeaderProps) => {
                 <LogOut className="w-4 h-4" />
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(true)}
+            >
+              <Menu className="w-6 h-6" />
+            </Button>
           </div>
         </div>
       </header>
@@ -112,6 +170,7 @@ const Header = ({ onLocationSelect }: HeaderProps) => {
       <CommunityModal isOpen={communityOpen} onClose={() => setCommunityOpen(false)} />
       <CreateStoryModal isOpen={createOpen} onClose={() => setCreateOpen(false)} />
       <ShareModal isOpen={shareOpen} onClose={() => setShareOpen(false)} />
+      <MobileMenu />
     </>
   );
 };
