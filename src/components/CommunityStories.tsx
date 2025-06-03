@@ -11,10 +11,6 @@ interface CommunityStoriesProps {
   isVisible: boolean;
 }
 
-interface Profile {
-  username: string;
-}
-
 interface Story {
   id: string;
   title: string;
@@ -28,7 +24,9 @@ interface Story {
     }>;
   };
   user_id: string;
-  profiles: Profile | null;
+  user_details?: {
+    username: string;
+  };
 }
 
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
@@ -53,7 +51,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
           image_urls,
           content,
           user_id,
-          profiles(username)
+          user_details:profiles!stories_user_id_fkey(username)
         `)
         .eq('is_public', true);
 
@@ -78,10 +76,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         throw error;
       }
       
-      return (data || []).map(item => ({
-        ...item,
-        profiles: item.profiles as Profile | null
-      })) as Story[];
+      return data as Story[];
     }
   });
 
@@ -271,7 +266,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
                   <div className="flex items-center space-x-2">
                     <Users className="w-4 h-4 text-mystical-accent" />
                     <span className="text-white/70 text-sm">
-                      by {story.profiles?.username || 'Anonymous'}
+                      by {story.user_details?.username || 'Anonymous'}
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
