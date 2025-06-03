@@ -39,37 +39,34 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
 
     setIsGeneratingImage(true);
     try {
-      const response = await fetch('https://api.huggingface.co/models/black-forest-labs/FLUX.1-schnell', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer hf_demo', // Using demo token for testing
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: formData.imagePrompt,
-          options: { wait_for_model: true }
-        }),
+      console.log('Calling image generation function...');
+      
+      const { data, error } = await supabase.functions.invoke('generate-story-image', {
+        body: {
+          prompt: formData.imagePrompt,
+          location: formData.location
+        }
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const imageUrl = URL.createObjectURL(blob);
-        setGeneratedImage(imageUrl);
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      console.log('Image generation response:', data);
+
+      if (data?.imageUrl) {
+        setGeneratedImage(data.imageUrl);
         toast({
           title: "Image generated!",
-          description: "Your story image has been created.",
+          description: data.message || "Your story image has been created.",
         });
       } else {
-        // Fallback to placeholder image
-        const fallbackImage = `https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80`;
-        setGeneratedImage(fallbackImage);
-        toast({
-          title: "Using placeholder image",
-          description: "Generated a beautiful placeholder for your story.",
-        });
+        throw new Error('No image URL received');
       }
     } catch (error) {
       console.error('Image generation error:', error);
+      // Use a fallback image
       const fallbackImage = `https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80`;
       setGeneratedImage(fallbackImage);
       toast({
@@ -127,6 +124,13 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
         ]
       };
 
+      console.log('Creating story with data:', {
+        title: formData.title,
+        location: formData.location,
+        content: storyContent,
+        image_urls: [generatedImage || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop"]
+      });
+
       // Save story to database
       const { data: storyData, error } = await supabase
         .from('stories')
@@ -141,7 +145,8 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
             "The architecture tells stories of different historical periods."
           ],
           image_urls: [generatedImage || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop"],
-          is_public: true
+          is_public: true,
+          upvotes: 1 // Start with author's implicit upvote
         })
         .select()
         .single();
@@ -155,6 +160,8 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
         });
         return;
       }
+
+      console.log('Story created successfully:', storyData);
 
       // Create story interaction record
       await supabase

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -31,14 +32,23 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: stories = [], isLoading } = useQuery({
+  const { data: stories = [], isLoading, error } = useQuery({
     queryKey: ['stories', filter],
     queryFn: async () => {
+      console.log('Fetching stories with filter:', filter);
+      
       let query = supabase
         .from('stories')
         .select(`
-          *,
-          profiles(username)
+          id,
+          title,
+          location,
+          upvotes,
+          created_at,
+          image_urls,
+          content,
+          user_id,
+          profiles!inner(username)
         `)
         .eq('is_public', true);
 
@@ -59,20 +69,38 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
       }
 
       const { data, error } = await query.limit(9);
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Supabase query error:', error);
+        throw error;
+      }
+      
+      console.log('Raw data from Supabase:', data);
       
       // Transform the data to match our Story interface
-      return (data || []).map(item => ({
+      const transformedData = (data || []).map(item => ({
         ...item,
-        profiles: item.profiles && 
-                 typeof item.profiles === 'object' && 
-                 item.profiles !== null && 
-                 'username' in item.profiles 
+        profiles: item.profiles && typeof item.profiles === 'object' 
           ? { username: item.profiles.username }
           : null
       })) as Story[];
+      
+      console.log('Transformed stories:', transformedData);
+      return transformedData;
     }
   });
+
+  // Log any errors
+  useEffect(() => {
+    if (error) {
+      console.error('Query error:', error);
+      toast({
+        title: "Error loading stories",
+        description: "Failed to load community stories. Please try again.",
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
 
   const handleUpvote = async (storyId: string) => {
     if (!user) {
@@ -201,6 +229,21 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         <div className="text-center py-8">
           <div className="animate-spin w-8 h-8 border-2 border-mystical-accent border-t-transparent rounded-full mx-auto"></div>
           <p className="mt-4 text-white/70">Loading stories...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <p className="text-red-400">Error loading stories. Please try again.</p>
+          <Button 
+            onClick={() => queryClient.invalidateQueries({ queryKey: ['stories'] })}
+            className="mt-4"
+            variant="outline"
+          >
+            Retry
+          </Button>
+        </div>
+      ) : stories.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-white/70">No stories found. Be the first to create one!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
