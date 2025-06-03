@@ -1,13 +1,13 @@
-
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2, Image } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import ImageUpload from "./ImageUpload";
 
 interface CreateStoryModalProps {
   isOpen: boolean;
@@ -18,64 +18,38 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     location: "",
     prompt: "",
-    imagePrompt: ""
   });
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const generateImage = async () => {
-    if (!formData.imagePrompt.trim()) {
-      toast({
-        title: "Image prompt required",
-        description: "Please enter a description for the image",
-        variant: "destructive"
-      });
-      return;
+  const handleImageSelect = (file: File) => {
+    setSelectedFile(file);
+    const imageUrl = URL.createObjectURL(file);
+    setSelectedImage(imageUrl);
+  };
+
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `story-images/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('story-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      throw uploadError;
     }
 
-    setIsGeneratingImage(true);
-    try {
-      console.log('Calling image generation function...');
-      
-      const { data, error } = await supabase.functions.invoke('generate-story-image', {
-        body: {
-          prompt: formData.imagePrompt,
-          location: formData.location
-        }
-      });
+    const { data: { publicUrl } } = supabase.storage
+      .from('story-images')
+      .getPublicUrl(filePath);
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
-
-      console.log('Image generation response:', data);
-
-      if (data?.imageUrl) {
-        setGeneratedImage(data.imageUrl);
-        toast({
-          title: "Image generated!",
-          description: data.message || "Your story image has been created.",
-        });
-      } else {
-        throw new Error('No image URL received');
-      }
-    } catch (error) {
-      console.error('Image generation error:', error);
-      // Use a fallback image
-      const fallbackImage = `https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80`;
-      setGeneratedImage(fallbackImage);
-      toast({
-        title: "Using placeholder image",
-        description: "Generated a beautiful placeholder for your story.",
-      });
-    } finally {
-      setIsGeneratingImage(false);
-    }
+    return publicUrl;
   };
 
   const createStory = async () => {
@@ -88,10 +62,10 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
       return;
     }
 
-    if (!formData.title || !formData.location || !formData.prompt) {
+    if (!formData.title || !formData.location || !formData.prompt || !selectedFile) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields and upload an image",
         variant: "destructive"
       });
       return;
@@ -99,13 +73,16 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
 
     setIsGenerating(true);
     try {
+      // Upload the image
+      const imageUrl = await uploadImage(selectedFile);
+
       // Create story content
       const storyContent = {
         segments: [
           {
             id: 1,
             text: `${formData.prompt} In the heart of ${formData.location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you.`,
-            image: generatedImage || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop",
+            image: imageUrl,
             choices: [
               { id: 'A', text: "Explore the mysterious alleyways", nextSegment: 2 },
               { id: 'B', text: "Visit the local marketplace", nextSegment: 3 },
@@ -115,7 +92,7 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
           {
             id: 2,
             text: "The narrow alleyways reveal hidden murals and forgotten doorways. Each step takes you deeper into the soul of the city.",
-            image: generatedImage || "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop",
+            image: imageUrl,
             choices: [
               { id: 'A', text: "Follow the murals to their source", nextSegment: 5 },
               { id: 'B', text: "Knock on an ancient door", nextSegment: 6 }
@@ -123,13 +100,6 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
           }
         ]
       };
-
-      console.log('Creating story with data:', {
-        title: formData.title,
-        location: formData.location,
-        content: storyContent,
-        image_urls: [generatedImage || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop"]
-      });
 
       // Save story to database
       const { data: storyData, error } = await supabase
@@ -144,24 +114,16 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
             "Local traditions are deeply woven into daily life.",
             "The architecture tells stories of different historical periods."
           ],
-          image_urls: [generatedImage || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop"],
+          image_urls: [imageUrl],
           is_public: true,
-          upvotes: 1 // Start with author's implicit upvote
+          upvotes: 1
         })
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving story:', error);
-        toast({
-          title: "Error creating story",
-          description: "Failed to save your story. Please try again.",
-          variant: "destructive"
-        });
-        return;
+        throw error;
       }
-
-      console.log('Story created successfully:', storyData);
 
       // Create story interaction record
       await supabase
@@ -172,7 +134,7 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
           choices_made: { segment_1: 'A' }
         });
 
-      // Create initial vote (author's implicit upvote)
+      // Create initial vote
       await supabase
         .from('story_votes')
         .insert({
@@ -187,8 +149,9 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
       });
 
       // Reset form and close modal
-      setFormData({ title: "", location: "", prompt: "", imagePrompt: "" });
-      setGeneratedImage(null);
+      setFormData({ title: "", location: "", prompt: "" });
+      setSelectedImage(null);
+      setSelectedFile(null);
       onClose();
     } catch (error) {
       console.error('Error creating story:', error);
@@ -242,36 +205,12 @@ const CreateStoryModal = ({ isOpen, onClose }: CreateStoryModalProps) => {
           </div>
           
           <div>
-            <label className="text-sm font-medium">Image Description (Optional)</label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Describe the scene for AI image generation..."
-                value={formData.imagePrompt}
-                onChange={(e) => setFormData(prev => ({ ...prev, imagePrompt: e.target.value }))}
-              />
-              <Button 
-                onClick={generateImage} 
-                disabled={isGeneratingImage}
-                variant="outline"
-              >
-                {isGeneratingImage ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Image className="w-4 h-4" />
-                )}
-              </Button>
-            </div>
+            <label className="text-sm font-medium">Story Image</label>
+            <ImageUpload
+              onImageSelect={handleImageSelect}
+              selectedImage={selectedImage}
+            />
           </div>
-
-          {generatedImage && (
-            <div className="mt-4">
-              <img
-                src={generatedImage}
-                alt="Generated story image"
-                className="w-full h-48 object-cover rounded-lg"
-              />
-            </div>
-          )}
           
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="outline" onClick={onClose}>
