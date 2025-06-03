@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -23,7 +22,7 @@ interface Story {
   user_id: string;
   profiles?: {
     username: string;
-  };
+  } | null;
 }
 
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
@@ -61,7 +60,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
 
       const { data, error } = await query.limit(9);
       if (error) throw error;
-      return data;
+      return data as Story[];
     }
   });
 
@@ -224,7 +223,9 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
                 </div>
                 
                 <p className="text-white/80 text-sm line-clamp-2">
-                  {story.content?.segments?.[0]?.text || "An enchanting story awaits..."}
+                  {typeof story.content === 'object' && story.content?.segments?.[0]?.text 
+                    ? story.content.segments[0].text 
+                    : "An enchanting story awaits..."}
                 </p>
                 
                 <div className="flex items-center justify-between pt-2 border-t border-white/10">
