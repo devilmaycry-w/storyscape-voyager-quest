@@ -106,7 +106,7 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         .select('*')
         .eq('user_id', user.id)
         .eq('story_id', storyId)
-        .single();
+        .maybeSingle();
 
       if (existingVote) {
         if (existingVote.vote_type === 'upvote') {
