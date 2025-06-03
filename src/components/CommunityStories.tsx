@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Users, ArrowUp, MapPin, Eye, X } from "lucide-react";
+import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface CommunityStoriesProps {
   isVisible: boolean;
@@ -32,7 +31,6 @@ interface Story {
 
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
   const [filter, setFilter] = useState('popular');
-  const [flippedStoryId, setFlippedStoryId] = useState<string | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -154,8 +152,32 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
     }
   };
 
-  const handleRead = (story: Story) => {
-    setFlippedStoryId(flippedStoryId === story.id ? null : story.id);
+  const handleRead = async (story: Story) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to read stories",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await supabase
+        .from('story_interactions')
+        .insert({
+          user_id: user.id,
+          story_id: story.id,
+          choices_made: {}
+        });
+
+      toast({
+        title: "Story opened!",
+        description: `Now reading "${story.title}"`,
+      });
+    } catch (error) {
+      console.error('Error recording read:', error);
+    }
   };
 
   if (!isVisible) return null;
@@ -208,102 +230,66 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {stories.map((story) => (
-            <div key={story.id} className="relative perspective-1000">
-              <motion.div
-                initial={false}
-                animate={{ rotateY: flippedStoryId === story.id ? 180 : 0 }}
-                transition={{ duration: 0.6 }}
-                className="w-full preserve-3d"
-              >
-                {/* Front of card */}
-                <Card className={`story-card overflow-hidden ${flippedStoryId === story.id ? 'backface-hidden' : ''}`}>
-                  <div className="relative">
-                    <img 
-                      src={story.image_urls?.[0] || "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=200&fit=crop"} 
-                      alt={story.title}
-                      className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-mystical-primary to-transparent opacity-60"></div>
-                    <div className="absolute top-3 right-3 glass-card px-2 py-1 flex items-center space-x-1">
-                      <ArrowUp className="w-3 h-3 text-mystical-accent" />
-                      <span className="text-mystical-accent text-sm font-semibold">
-                        {story.upvotes || 0}
-                      </span>
-                    </div>
+            <Card key={story.id} className="story-card overflow-hidden cursor-pointer group">
+              <div className="relative">
+                <img 
+                  src={story.image_urls?.[0] || "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=200&fit=crop"} 
+                  alt={story.title}
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-mystical-primary to-transparent opacity-60"></div>
+                <div className="absolute top-3 right-3 glass-card px-2 py-1 flex items-center space-x-1">
+                  <ArrowUp className="w-3 h-3 text-mystical-accent" />
+                  <span className="text-mystical-accent text-sm font-semibold">
+                    {story.upvotes || 0}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="p-4 space-y-3">
+                <div className="space-y-1">
+                  <h3 className="font-mystical text-lg text-mystical-accent line-clamp-1">
+                    {story.title}
+                  </h3>
+                  <div className="flex items-center space-x-1 text-white/60 text-sm">
+                    <MapPin className="w-3 h-3" />
+                    <span>{story.location}</span>
                   </div>
-                  
-                  <div className="p-4 space-y-3">
-                    <div className="space-y-1">
-                      <h3 className="font-mystical text-lg text-mystical-accent line-clamp-1">
-                        {story.title}
-                      </h3>
-                      <div className="flex items-center space-x-1 text-white/60 text-sm">
-                        <MapPin className="w-3 h-3" />
-                        <span>{story.location}</span>
-                      </div>
-                    </div>
-                    
-                    <p className="text-white/80 text-sm line-clamp-2">
-                      {story.content?.segments?.[0]?.text || "An enchanting story awaits..."}
-                    </p>
-                    
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4 text-mystical-accent" />
-                        <span className="text-white/70 text-sm">
-                          Anonymous
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => handleUpvote(story.id)}
-                          className="text-mystical-accent hover:bg-mystical-accent/10 p-1"
-                        >
-                          <ArrowUp className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          onClick={() => handleRead(story)}
-                          className="text-mystical-accent hover:bg-mystical-accent/10"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Read
-                        </Button>
-                      </div>
-                    </div>
+                </div>
+                
+                <p className="text-white/80 text-sm line-clamp-2">
+                  {story.content?.segments?.[0]?.text || "An enchanting story awaits..."}
+                </p>
+                
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-mystical-accent" />
+                    <span className="text-white/70 text-sm">
+                      Anonymous
+                    </span>
                   </div>
-                </Card>
-
-                {/* Back of card */}
-                <Card 
-                  className={`story-card overflow-hidden absolute inset-0 ${flippedStoryId === story.id ? 'rotate-y-180' : 'backface-hidden'}`}
-                >
-                  <div className="p-6 h-full flex flex-col">
-                    <Button
+                  <div className="flex items-center space-x-1">
+                    <Button 
+                      size="sm" 
                       variant="ghost"
-                      size="sm"
-                      onClick={() => setFlippedStoryId(null)}
-                      className="absolute top-2 right-2 text-mystical-accent hover:bg-mystical-accent/10"
+                      onClick={() => handleUpvote(story.id)}
+                      className="text-mystical-accent hover:bg-mystical-accent/10 p-1"
                     >
-                      <X className="w-4 h-4" />
+                      <ArrowUp className="w-4 h-4" />
                     </Button>
-                    <h3 className="font-mystical text-xl text-mystical-accent mb-4">
-                      {story.title}
-                    </h3>
-                    <div className="flex-1 overflow-y-auto prose prose-invert max-w-none">
-                      {story.content?.segments?.map((segment, index) => (
-                        <p key={index} className="text-white/90 mb-4">
-                          {segment.text}
-                        </p>
-                      ))}
-                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleRead(story)}
+                      className="text-mystical-accent hover:bg-mystical-accent/10"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Read
+                    </Button>
                   </div>
-                </Card>
-              </motion.div>
-            </div>
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
       )}
