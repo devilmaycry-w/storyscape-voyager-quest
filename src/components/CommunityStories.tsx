@@ -1,45 +1,165 @@
 
-import { useState } from "react";
-import { Users, ArrowUp, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface CommunityStoriesProps {
   isVisible: boolean;
 }
 
+interface Story {
+  id: string;
+  title: string;
+  location: string;
+  upvotes: number;
+  created_at: string;
+  image_urls: string[];
+  content: any;
+  user_id: string;
+  profiles?: {
+    username: string;
+  };
+}
+
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
   const [filter, setFilter] = useState('popular');
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const communityStories = [
-    {
-      id: 1,
-      title: "The Phantom of Montmartre",
-      location: "Paris, France",
-      author: "Emma_Writer",
-      upvotes: 42,
-      thumbnail: "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=200&fit=crop",
-      preview: "A mysterious figure haunts the cobblestone streets of Montmartre, leaving behind only whispers and golden coins..."
-    },
-    {
-      id: 2,
-      title: "Secrets of the Floating Market",
-      location: "Bangkok, Thailand",
-      author: "AdventureSeeker",
-      upvotes: 38,
-      thumbnail: "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=300&h=200&fit=crop",
-      preview: "Ancient spirits guide travelers through the magical waterways where reality bends like the river itself..."
-    },
-    {
-      id: 3,
-      title: "The Clockmaker's Dream",
-      location: "Prague, Czech Republic", 
-      author: "TimeTraveler_93",
-      upvotes: 35,
-      thumbnail: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=300&h=200&fit=crop",
-      preview: "In the heart of the old city, a magical clock doesn't just tell time—it reveals the future..."
+  const { data: stories = [], isLoading } = useQuery({
+    queryKey: ['stories', filter],
+    queryFn: async () => {
+      let query = supabase
+        .from('stories')
+        .select(`
+          *,
+          profiles(username)
+        `)
+        .eq('is_public', true);
+
+      // Apply different sorting based on filter
+      switch (filter) {
+        case 'popular':
+          query = query.order('upvotes', { ascending: false });
+          break;
+        case 'recent':
+          query = query.order('created_at', { ascending: false });
+          break;
+        case 'trending':
+          // For trending, we'll use a combination of recent creation and upvotes
+          query = query
+            .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .order('upvotes', { ascending: false });
+          break;
+      }
+
+      const { data, error } = await query.limit(9);
+      if (error) throw error;
+      return data;
     }
-  ];
+  });
+
+  const handleUpvote = async (storyId: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to vote on stories",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('story_votes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('story_id', storyId)
+        .single();
+
+      if (existingVote) {
+        if (existingVote.vote_type === 'upvote') {
+          // Remove upvote
+          await supabase
+            .from('story_votes')
+            .delete()
+            .eq('id', existingVote.id);
+          
+          await supabase.rpc('decrement_upvotes', { story_id: storyId });
+        } else {
+          // Change downvote to upvote
+          await supabase
+            .from('story_votes')
+            .update({ vote_type: 'upvote' })
+            .eq('id', existingVote.id);
+            
+          await supabase.rpc('increment_upvotes', { story_id: storyId });
+        }
+      } else {
+        // Add new upvote
+        await supabase
+          .from('story_votes')
+          .insert({
+            user_id: user.id,
+            story_id: storyId,
+            vote_type: 'upvote'
+          });
+          
+        await supabase.rpc('increment_upvotes', { story_id: storyId });
+      }
+
+      // Refresh the stories data
+      queryClient.invalidateQueries({ queryKey: ['stories'] });
+      
+      toast({
+        title: "Vote recorded!",
+        description: "Thank you for your feedback.",
+      });
+    } catch (error) {
+      console.error('Error voting:', error);
+      toast({
+        title: "Vote failed",
+        description: "Failed to record your vote. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRead = async (story: Story) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to read stories",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Record story interaction
+      await supabase
+        .from('story_interactions')
+        .insert({
+          user_id: user.id,
+          story_id: story.id,
+          choices_made: {}
+        });
+
+      toast({
+        title: "Story opened!",
+        description: `Now reading "${story.title}"`,
+      });
+    } catch (error) {
+      console.error('Error recording read:', error);
+    }
+  };
 
   if (!isVisible) return null;
 
@@ -68,58 +188,77 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {communityStories.map((story) => (
-          <Card key={story.id} className="story-card overflow-hidden cursor-pointer group">
-            <div className="relative">
-              <img 
-                src={story.thumbnail} 
-                alt={story.title}
-                className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-mystical-primary to-transparent opacity-60"></div>
-              <div className="absolute top-3 right-3 glass-card px-2 py-1 flex items-center space-x-1">
-                <ArrowUp className="w-3 h-3 text-mystical-accent" />
-                <span className="text-mystical-accent text-sm font-semibold">
-                  {story.upvotes}
-                </span>
-              </div>
-            </div>
-            
-            <div className="p-4 space-y-3">
-              <div className="space-y-1">
-                <h3 className="font-mystical text-lg text-mystical-accent line-clamp-1">
-                  {story.title}
-                </h3>
-                <div className="flex items-center space-x-1 text-white/60 text-sm">
-                  <MapPin className="w-3 h-3" />
-                  <span>{story.location}</span>
-                </div>
-              </div>
-              
-              <p className="text-white/80 text-sm line-clamp-2">
-                {story.preview}
-              </p>
-              
-              <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                <div className="flex items-center space-x-2">
-                  <Users className="w-4 h-4 text-mystical-accent" />
-                  <span className="text-white/70 text-sm">
-                    by {story.author}
+      {isLoading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin w-8 h-8 border-2 border-mystical-accent border-t-transparent rounded-full mx-auto"></div>
+          <p className="mt-4 text-white/70">Loading stories...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {stories.map((story) => (
+            <Card key={story.id} className="story-card overflow-hidden cursor-pointer group">
+              <div className="relative">
+                <img 
+                  src={story.image_urls?.[0] || "https://images.unsplash.com/photo-1426604966848-d7adac402bff?w=300&h=200&fit=crop"} 
+                  alt={story.title}
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-mystical-primary to-transparent opacity-60"></div>
+                <div className="absolute top-3 right-3 glass-card px-2 py-1 flex items-center space-x-1">
+                  <ArrowUp className="w-3 h-3 text-mystical-accent" />
+                  <span className="text-mystical-accent text-sm font-semibold">
+                    {story.upvotes || 0}
                   </span>
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  className="text-mystical-accent hover:bg-mystical-accent/10"
-                >
-                  Read
-                </Button>
               </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+              
+              <div className="p-4 space-y-3">
+                <div className="space-y-1">
+                  <h3 className="font-mystical text-lg text-mystical-accent line-clamp-1">
+                    {story.title}
+                  </h3>
+                  <div className="flex items-center space-x-1 text-white/60 text-sm">
+                    <MapPin className="w-3 h-3" />
+                    <span>{story.location}</span>
+                  </div>
+                </div>
+                
+                <p className="text-white/80 text-sm line-clamp-2">
+                  {story.content?.segments?.[0]?.text || "An enchanting story awaits..."}
+                </p>
+                
+                <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-mystical-accent" />
+                    <span className="text-white/70 text-sm">
+                      by {story.profiles?.username || 'Anonymous'}
+                    </span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleUpvote(story.id)}
+                      className="text-mystical-accent hover:bg-mystical-accent/10 p-1"
+                    >
+                      <ArrowUp className="w-4 h-4" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost"
+                      onClick={() => handleRead(story)}
+                      className="text-mystical-accent hover:bg-mystical-accent/10"
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      Read
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <div className="text-center">
         <Button variant="outline" className="glass-card border-mystical-accent/30">

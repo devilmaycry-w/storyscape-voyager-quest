@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import Header from "@/components/Header";
 import LocationInput from "@/components/LocationInput";
@@ -105,7 +104,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-mystical-gradient">
-      <Header />
+      <Header onLocationSelect={handleLocationSelect} />
       
       <main className="max-w-6xl mx-auto px-4 py-8">
         {currentView === 'home' && (

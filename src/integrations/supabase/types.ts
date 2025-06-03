@@ -153,7 +153,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      decrement_upvotes: {
+        Args: { story_id: string }
+        Returns: undefined
+      }
+      increment_upvotes: {
+        Args: { story_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
