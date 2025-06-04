@@ -9,13 +9,13 @@ const Footer = () => {
           <div className="flex items-center justify-center space-x-2">
             <span className="text-white/70">Built with</span>
             <a 
-              href="https://bolt.new/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center space-x-1 text-mystical-accent hover:text-mystical-accent/80 transition-colors font-semibold"
+            href="https://bolt.new/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 transition-colors font-bold underline decoration-wavy underline-offset-4"
             >
-              <span>Bolt.new</span>
-              <ExternalLink className="w-3 h-3" />
+            <span>Bolt.new</span>
+            <ExternalLink className="w-3 h-3" />
             </a>
           </div>
           
