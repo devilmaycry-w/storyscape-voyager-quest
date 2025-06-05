@@ -1,5 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.4";
 
 const corsHeaders = {
@@ -26,8 +26,14 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 serve(async (req) => {
+  // Add Content-Type to CORS headers for preflight requests
+  const headers = {
+    ...corsHeaders,
+    'Content-Type': 'application/json',
+  };
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   try {
@@ -69,8 +75,8 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      const errorData = await response.text();
-      throw new Error(`ElevenLabs API error: ${response.status} - ${errorData}`);
+      const errorText = await response.text();
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
     const audioBuffer = await response.arrayBuffer();
@@ -85,7 +91,7 @@ serve(async (req) => {
       });
 
     if (uploadError) {
-      throw uploadError;
+      throw new Error(`Storage upload error: ${uploadError.message}`);
     }
 
     const { data: { publicUrl } } = supabase.storage
@@ -94,19 +100,21 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ audioUrl: publicUrl }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { headers }
     );
   } catch (error) {
     console.error('Error generating audio:', error);
+    
+    // Ensure we always return a proper error message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message,
-        details: error.stack 
+        error: errorMessage,
+        details: error instanceof Error ? error.stack : undefined
       }),
       {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers,
         status: 500,
       }
     );
