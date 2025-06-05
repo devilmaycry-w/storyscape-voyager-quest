@@ -32,20 +32,31 @@ serve(async (req) => {
     'Content-Type': 'application/json',
   };
 
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers });
   }
 
   try {
-    const { text, voiceId } = await req.json();
+    // Validate request body
+    const body = await req.json().catch(() => {
+      throw new Error('Invalid JSON in request body');
+    });
+
+    const { text, voiceId } = body;
     const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
 
+    // Validate required fields
     if (!apiKey) {
       throw new Error('ElevenLabs API key not configured');
     }
 
-    if (!text || !voiceId) {
-      throw new Error('Text and voiceId are required');
+    if (!text) {
+      throw new Error('Text is required');
+    }
+
+    if (!voiceId) {
+      throw new Error('VoiceId is required');
     }
 
     // Get the actual ElevenLabs voice ID from the mapping
@@ -54,6 +65,18 @@ serve(async (req) => {
       throw new Error(`Invalid voice ID: ${voiceId}`);
     }
 
+    // Test the API key with a simple request first
+    const testResponse = await fetch('https://api.elevenlabs.io/v1/voices', {
+      headers: {
+        'xi-api-key': apiKey,
+      },
+    });
+
+    if (!testResponse.ok) {
+      throw new Error(`ElevenLabs API key validation failed: ${testResponse.status}`);
+    }
+
+    // Make the text-to-speech request
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId}`,
       {
@@ -99,20 +122,25 @@ serve(async (req) => {
       .getPublicUrl(fileName);
 
     return new Response(
-      JSON.stringify({ audioUrl: publicUrl }),
+      JSON.stringify({ 
+        success: true,
+        audioUrl: publicUrl 
+      }),
       { headers }
     );
+
   } catch (error) {
     console.error('Error generating audio:', error);
     
-    // Ensure we always return a proper error message
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    // Ensure we always return a proper error response
+    const errorResponse = {
+      success: false,
+      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      details: error instanceof Error ? error.stack : String(error)
+    };
     
     return new Response(
-      JSON.stringify({ 
-        error: errorMessage,
-        details: error instanceof Error ? error.stack : undefined
-      }),
+      JSON.stringify(errorResponse),
       {
         headers,
         status: 500,
