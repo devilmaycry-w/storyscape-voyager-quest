@@ -161,7 +161,7 @@ const CharactersPage = () => {
                       {Object.entries(character.stats || {}).map(([stat, value]) => (
                         <div key={stat} className="flex justify-between">
                           <span className="text-white/60 capitalize">{stat}</span>
-                          <span className="text-mystical-accent">{value}</span>
+                          <span className="text-mystical-accent">{String(value)}</span>
                         </div>
                       ))}
                     </div>
