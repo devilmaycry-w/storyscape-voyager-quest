@@ -3,8 +3,6 @@ import { ArrowUp, Share, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
-import AudioPlayer from "./AudioPlayer";
-import { useAudio } from "@/hooks/useAudio";
 import { useToast } from "@/hooks/use-toast";
 
 interface StoryViewerProps {
@@ -17,27 +15,9 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
   const [storyPath, setStoryPath] = useState<number[]>([1]);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showFullStory, setShowFullStory] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const { generateAudio, isGenerating } = useAudio();
   const { toast } = useToast();
 
   const segment = story.segments.find((s: any) => s.id === currentSegment);
-
-  const handleGenerateAudio = async () => {
-    if (!segment?.text) return;
-    
-    try {
-      const url = await generateAudio(segment.text, story.voice_id || "default");
-      setAudioUrl(url);
-    } catch (error) {
-      console.error('Error generating audio:', error);
-      toast({
-        title: "Audio generation failed",
-        description: "Failed to generate audio narration. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleChoice = async (choice: any) => {
     if (choice.nextSegment && !isTransitioning) {
@@ -198,23 +178,6 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
                       <p className="text-white/90 leading-relaxed text-lg md:text-xl">
                         {segment.text}
                       </p>
-                    </div>
-
-                    <div className="mt-4">
-                      <AudioPlayer
-                        audioUrl={audioUrl}
-                        title={`Chapter ${storyPath.length}`}
-                        isLoading={isGenerating}
-                        onEnded={() => setAudioUrl(null)}
-                      />
-                      {!audioUrl && !isGenerating && (
-                        <Button
-                          onClick={handleGenerateAudio}
-                          className="w-full mt-2 mystical-button"
-                        >
-                          Generate Audio Narration
-                        </Button>
-                      )}
                     </div>
 
                     {segment.choices && (
