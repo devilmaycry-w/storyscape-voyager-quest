@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import AudioPlayer from "./AudioPlayer";
 import { useAudio } from "@/hooks/useAudio";
+import { useToast } from "@/hooks/use-toast";
 
 interface StoryViewerProps {
   story: any;
@@ -18,6 +19,7 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
   const [showFullStory, setShowFullStory] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const { generateAudio, isGenerating } = useAudio();
+  const { toast } = useToast();
 
   const segment = story.segments.find((s: any) => s.id === currentSegment);
 
@@ -47,16 +49,37 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
     }
   };
 
-  const shareStory = () => {
+  const shareStory = async () => {
     const text = `I just discovered an amazing story about ${story.location} on StoryScape! #StoryScape`;
-    if (navigator.share) {
-      navigator.share({
-        title: story.title,
-        text: text,
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(text + ' ' + window.location.href);
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: story.title,
+          text: text,
+          url: window.location.href
+        });
+      } else {
+        await navigator.clipboard.writeText(text + ' ' + window.location.href);
+        toast({
+          title: "Link copied",
+          description: "Story link has been copied to your clipboard!",
+        });
+      }
+    } catch (error) {
+      // Silently handle share/clipboard errors and fall back to clipboard
+      try {
+        await navigator.clipboard.writeText(text + ' ' + window.location.href);
+        toast({
+          title: "Link copied",
+          description: "Story link has been copied to your clipboard!",
+        });
+      } catch (clipboardError) {
+        toast({
+          title: "Share failed",
+          description: "Unable to share or copy the story link.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
