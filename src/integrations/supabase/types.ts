@@ -9,6 +9,125 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      audio_segments: {
+        Row: {
+          audio_url: string
+          created_at: string
+          id: string
+          segment_index: number
+          story_id: string
+          voice_id: string
+        }
+        Insert: {
+          audio_url: string
+          created_at?: string
+          id?: string
+          segment_index: number
+          story_id: string
+          voice_id: string
+        }
+        Update: {
+          audio_url?: string
+          created_at?: string
+          id?: string
+          segment_index?: number
+          story_id?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_segments_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_stories: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          role: string | null
+          story_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          role?: string | null
+          story_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          role?: string | null
+          story_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_stories_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_stories_story_id_fkey"
+            columns: ["story_id"]
+            isOneToOne: false
+            referencedRelation: "stories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      characters: {
+        Row: {
+          appearance: Json | null
+          avatar_url: string | null
+          background_story: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          personality_traits: Json | null
+          stats: Json | null
+          updated_at: string
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          appearance?: Json | null
+          avatar_url?: string | null
+          background_story?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          personality_traits?: Json | null
+          stats?: Json | null
+          updated_at?: string
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          appearance?: Json | null
+          avatar_url?: string | null
+          background_story?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          personality_traits?: Json | null
+          stats?: Json | null
+          updated_at?: string
+          user_id?: string
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

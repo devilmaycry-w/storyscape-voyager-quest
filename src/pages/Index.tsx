@@ -1,17 +1,19 @@
+
 import { useState } from "react";
 import Header from "@/components/Header";
 import LocationInput from "@/components/LocationInput";
 import StoryGenerator from "@/components/StoryGenerator";
 import StoryViewer from "@/components/StoryViewer";
 import CommunityStories from "@/components/CommunityStories";
+import CharactersPage from "@/components/CharactersPage";
 import Footer from "@/components/Footer";
-import { Sparkles, Map, Users, Share } from "lucide-react";
+import { Sparkles, Map, Users, Share, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const [selectedLocation, setSelectedLocation] = useState("");
   const [generatedStory, setGeneratedStory] = useState(null);
-  const [currentView, setCurrentView] = useState<'home' | 'generate' | 'story' | 'community'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'generate' | 'story' | 'community' | 'characters'>('home');
 
   const handleLocationSelect = (location: string) => {
     setSelectedLocation(location);
@@ -39,7 +41,7 @@ const Index = () => {
           Discover enchanting tales woven from the soul of every place on Earth
         </p>
         <p className="text-lg text-white/70 max-w-2xl mx-auto">
-          AI-powered interactive stories that bring locations to life through immersive adventures you control
+          AI-powered interactive stories with custom characters and immersive audio narration
         </p>
       </div>
 
@@ -52,12 +54,20 @@ const Index = () => {
           Start Your Adventure
         </Button>
         <Button 
+          onClick={() => setCurrentView('characters')}
+          variant="outline" 
+          className="glass-card border-mystical-accent/30 text-lg px-8 py-3"
+        >
+          <User className="w-5 h-5 mr-2" />
+          My Characters
+        </Button>
+        <Button 
           onClick={() => setCurrentView('community')}
           variant="outline" 
           className="glass-card border-mystical-accent/30 text-lg px-8 py-3"
         >
           <Users className="w-5 h-5 mr-2" />
-          Explore Community
+          Community
         </Button>
       </div>
     </div>
@@ -77,14 +87,14 @@ const Index = () => {
           description: "Unique stories generated for every adventure"
         },
         {
-          icon: <Users className="w-8 h-8 text-mystical-accent" />,
-          title: "Interactive",
-          description: "Make choices that shape your journey"
+          icon: <User className="w-8 h-8 text-mystical-accent" />,
+          title: "Custom Characters",
+          description: "Create and voice your own heroes"
         },
         {
           icon: <Share className="w-8 h-8 text-mystical-accent" />,
-          title: "Shareable",
-          description: "Share your stories with the world"
+          title: "Audio Stories",
+          description: "Immersive narration with character voices"
         }
       ].map((feature, index) => (
         <div key={index} className="story-card text-center space-y-3">
@@ -159,6 +169,21 @@ const Index = () => {
         {currentView === 'community' && (
           <div className="space-y-8">
             <CommunityStories isVisible={true} />
+            <div className="text-center">
+              <Button 
+                onClick={handleBackToHome}
+                variant="outline" 
+                className="glass-card border-mystical-accent/30"
+              >
+                Back to Home
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {currentView === 'characters' && (
+          <div className="space-y-8">
+            <CharactersPage />
             <div className="text-center">
               <Button 
                 onClick={handleBackToHome}
