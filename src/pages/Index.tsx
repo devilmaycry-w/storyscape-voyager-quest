@@ -93,8 +93,8 @@ const Index = () => {
         },
         {
           icon: <Share className="w-8 h-8 text-mystical-accent" />,
-          title: "Audio Stories",
-          description: "Immersive narration with character voices"
+          title: "Shareable",
+          description: "Why Upto you, share your stories to the world"
         }
       ].map((feature, index) => (
         <div key={index} className="story-card text-center space-y-3">
