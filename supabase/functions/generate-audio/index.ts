@@ -7,6 +7,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Voice ID mapping from friendly names to ElevenLabs voice IDs
+const VOICE_MAPPING = {
+  'Alice': '21m00Tcm4TlvDq8ikWAM',  // Rachel voice
+  'Brian': 'AZnzlk1XvdvUeBnXmlld',  // Domi voice
+  'Charlie': 'IKne3meq5aSn9XLyUdCD', // Adam voice
+  'Dorothy': 'EXAVITQu4vr4xnSDxMaL'  // Bella voice
+};
+
 // Initialize Supabase client
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -34,8 +42,14 @@ serve(async (req) => {
       throw new Error('Text and voiceId are required');
     }
 
+    // Get the actual ElevenLabs voice ID from the mapping
+    const elevenLabsVoiceId = VOICE_MAPPING[voiceId];
+    if (!elevenLabsVoiceId) {
+      throw new Error(`Invalid voice ID: ${voiceId}`);
+    }
+
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${elevenLabsVoiceId}`,
       {
         method: 'POST',
         headers: {
@@ -55,7 +69,8 @@ serve(async (req) => {
     );
 
     if (!response.ok) {
-      throw new Error(`ElevenLabs API error: ${response.statusText}`);
+      const errorData = await response.text();
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorData}`);
     }
 
     const audioBuffer = await response.arrayBuffer();
@@ -86,7 +101,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error generating audio:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: error.stack 
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
