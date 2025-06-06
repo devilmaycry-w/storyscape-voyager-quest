@@ -34,7 +34,7 @@ Overview:
 --
 **Installation**:
 
-1. Clone this repo: git clone <repo-url>
+1. Clone this repo: git clone <https://github.com/devilmaycry-w/storyscape-voyager-quest.git>
 2. Deploy via a no-code platform or hosting service (e.g., Netlify).
 
 --
