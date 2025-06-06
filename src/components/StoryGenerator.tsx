@@ -52,13 +52,15 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
       if (invokeError) {
         console.error('Supabase function error:', invokeError);
         
-        // Parse the error details from the response body
+        // Parse the error details from the response context body
         let errorTitle = "Generation failed";
         let errorMessage = "Failed to generate story. Please try again.";
         
         try {
-          const errorBody = JSON.parse(invokeError.message);
-          if (errorBody.error) {
+          // Access the error body from the context property
+          const errorBody = invokeError.context?.body ? JSON.parse(invokeError.context.body) : null;
+          
+          if (errorBody?.error) {
             switch (errorBody.error) {
               case 'Token limit exceeded':
                 errorTitle = "Daily limit reached";
@@ -83,7 +85,10 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
             }
           }
         } catch (parseError) {
-          console.error('Error parsing function error response:', parseError);
+          console.error('Error accessing function error details:', parseError);
+          // Use the generic error message if we can't parse the error body
+          errorTitle = "Generation failed";
+          errorMessage = "An unexpected error occurred. Please try again.";
         }
 
         toast({
