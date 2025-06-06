@@ -1,4 +1,3 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
@@ -8,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+const openAIApiKey = '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';
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
@@ -74,7 +73,7 @@ Keep it mystical but concise.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
