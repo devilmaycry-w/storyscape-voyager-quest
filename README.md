@@ -8,10 +8,11 @@ Overview:
 **Features**:
 
 1. **Location-Based Stories**: Enter a city/landmark; get a custom, interactive tale with decision points.
-2. **Custom Character**: Generate your own characters that specify your roots.
-3. **Community Hub**: Browse, upvote, and share user-created stories.
-4. **Gamification**: Earn "Storyteller Points" and climb a leaderboard.
-5. **Accessibility**: High-contrast UI, voice input, screen-reader support.
+2. **Enhanced Visual Maps**: with the help of **Leaflet** (is an open-source JavaScript library) used for creating interactive maps for the web. 
+3. **Custom Character**: Generate your own characters that specify your roots.
+4. **Community Hub**: Browse, upvote, and share user-created stories.
+5. **Gamification**: Earn "Storyteller Points" and climb a leaderboard.
+6. **Accessibility**: High-contrast UI, voice input, screen-reader support.
 
 ---
 **Tech Stack**:
