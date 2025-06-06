@@ -46,7 +46,7 @@ Overview:
 4. Personal: No story is personal to you now, Just SHARE!
 
 ---
-Built with **Bolt.new** | *WORLDSLARGESTHACKATHON 2025*
+**Built with Bolt.new** | **WORLDSLARGESTHACKATHON 2025**
 ---
 
 This project is licensed under the [MIT License](LICENSE).
