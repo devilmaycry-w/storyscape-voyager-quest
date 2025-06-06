@@ -55,23 +55,16 @@ serve(async (req) => {
       });
     }
 
-    // Generate story using OpenAI
-    const prompt = `Create an immersive interactive story set in ${location}. The story should:
-1. Be culturally authentic and respectful to the location
-2. Include rich historical and cultural details
-3. Have multiple choice branching paths
-4. Be engaging and magical
-5. Include 3-4 story segments with choices leading to different outcomes
-
-Format the response as a JSON object with:
-- title: An engaging story title
-- segments: Array of story segments, each with:
+    // Optimized prompt for cost efficiency
+    const prompt = `Create a short interactive story set in ${location}. Format as JSON with:
+- title: Engaging story title
+- segments: Array with 2-3 segments, each having:
   - id: number
-  - text: descriptive narrative text (150-200 words)
-  - choices: array of 2-3 choices with id, text, and nextSegment
-- culturalInsights: Array of 3-4 interesting cultural facts about the location
+  - text: narrative (80-120 words max)
+  - choices: 2 choices with id, text, nextSegment
+- culturalInsights: Array of 2-3 brief cultural facts
 
-Make the story mystical and adventurous while being educational about the location.`;
+Keep it mystical but concise.`;
 
     console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -85,15 +78,15 @@ Make the story mystical and adventurous while being educational about the locati
         messages: [
           {
             role: 'system',
-            content: 'You are a master storyteller who creates immersive, culturally rich interactive stories. Always respond with valid JSON only.'
+            content: 'You create short, engaging interactive stories. Always respond with valid JSON only.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.8,
-        max_tokens: 2000
+        temperature: 0.7,
+        max_tokens: 1000
       }),
     });
 
