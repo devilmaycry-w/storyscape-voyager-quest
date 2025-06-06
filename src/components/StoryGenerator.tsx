@@ -81,6 +81,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
 
       onStoryGenerated({
         id: savedStory.id,
+        location: location, // Explicitly include the location property
         ...storyData
       });
 
