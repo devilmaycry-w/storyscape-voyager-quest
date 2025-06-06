@@ -1,4 +1,3 @@
-
 import { ExternalLink } from "lucide-react";
 
 const Footer = () => {
@@ -9,13 +8,13 @@ const Footer = () => {
           <div className="flex items-center justify-center space-x-2">
             <span className="text-white/70">Built with</span>
             <a 
-            href="https://bolt.new/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 transition-colors font-bold underline decoration-wavy underline-offset-4"
+              href="https://bolt.new/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center space-x-1 text-yellow-400 hover:text-yellow-300 transition-colors font-bold underline decoration-wavy underline-offset-4"
             >
-            <span>Bolt.new</span>
-            <ExternalLink className="w-3 h-3" />
+              <span>Bolt.new</span>
+              <ExternalLink className="w-3 h-3" />
             </a>
           </div>
           
@@ -32,7 +31,16 @@ const Footer = () => {
           </div>
           
           <p className="text-white/50 text-sm">
-            © 2024 StoryScape. Weaving tales across the digital realm.
+            © 2025 StoryScape. Designed and Developed by{" "}
+            <a
+              href="https://www.linkedin.com/in/ankrit-maity-6a37a6351/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:underline"
+            >
+              Ankrit Maity
+            </a>
+            .
           </p>
         </div>
       </div>
