@@ -22,7 +22,13 @@ serve(async (req) => {
     const { location, user_id } = await req.json();
 
     if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
+      console.error('OpenAI API key not configured');
+      return new Response(JSON.stringify({
+        error: 'OpenAI API key not configured. Please contact support.'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
     }
 
     console.log('Generating story for location:', location, 'user:', user_id);
@@ -67,6 +73,7 @@ Format the response as a JSON object with:
 
 Make the story mystical and adventurous while being educational about the location.`;
 
+    console.log('Calling OpenAI API...');
     const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -90,17 +97,51 @@ Make the story mystical and adventurous while being educational about the locati
       }),
     });
 
+    console.log('OpenAI API response status:', openAIResponse.status);
+
     if (!openAIResponse.ok) {
-      throw new Error(`OpenAI API error: ${openAIResponse.status}`);
+      const errorText = await openAIResponse.text();
+      console.error('OpenAI API error details:', errorText);
+      
+      if (openAIResponse.status === 429) {
+        return new Response(JSON.stringify({
+          error: 'Rate limit exceeded',
+          message: 'OpenAI API rate limit exceeded. Please try again in a few minutes.'
+        }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else if (openAIResponse.status === 401) {
+        return new Response(JSON.stringify({
+          error: 'API key invalid',
+          message: 'OpenAI API key is invalid. Please contact support.'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else if (openAIResponse.status === 402) {
+        return new Response(JSON.stringify({
+          error: 'Quota exceeded',
+          message: 'OpenAI API quota exceeded. Please contact support.'
+        }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      } else {
+        throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
+      }
     }
 
     const openAIData = await openAIResponse.json();
+    console.log('OpenAI response received successfully');
+    
     let storyData;
     
     try {
       storyData = JSON.parse(openAIData.choices[0].message.content);
     } catch (parseError) {
       console.error('Failed to parse OpenAI response:', parseError);
+      console.error('Raw response:', openAIData.choices[0].message.content);
       throw new Error('Failed to generate story content');
     }
 
@@ -160,7 +201,8 @@ Make the story mystical and adventurous while being educational about the locati
   } catch (error) {
     console.error('Error generating story:', error);
     return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to generate story'
+      error: error.message || 'Failed to generate story',
+      message: 'An unexpected error occurred. Please try again later.'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

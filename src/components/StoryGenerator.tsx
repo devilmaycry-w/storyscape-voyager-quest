@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Loader2, Sparkles, Image, Share, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,27 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
             variant: "destructive",
           });
           refreshTokens();
+          return;
+        } else if (data.error === 'Rate limit exceeded') {
+          toast({
+            title: "Rate limit exceeded",
+            description: "OpenAI API rate limit exceeded. Please try again in a few minutes.",
+            variant: "destructive",
+          });
+          return;
+        } else if (data.error === 'API key invalid') {
+          toast({
+            title: "Configuration error",
+            description: "There's an issue with the API configuration. Please contact support.",
+            variant: "destructive",
+          });
+          return;
+        } else if (data.error === 'Quota exceeded') {
+          toast({
+            title: "Service temporarily unavailable",
+            description: "The AI service quota has been exceeded. Please contact support.",
+            variant: "destructive",
+          });
           return;
         }
         throw new Error(data.error);
