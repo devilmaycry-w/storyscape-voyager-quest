@@ -28,7 +28,7 @@ export const useTokens = () => {
         throw error;
       }
       
-      return data as TokenData;
+      return data as unknown as TokenData;
     },
     enabled: !!user
   });
