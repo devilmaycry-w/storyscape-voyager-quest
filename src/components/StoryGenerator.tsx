@@ -2,10 +2,9 @@ import { useState } from "react";
 import { Loader2, Sparkles, Image, Share, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useTokens } from "@/hooks/useTokens";
+import { supabase } from "@/integrations/supabase/client";
 
 interface StoryGeneratorProps {
   location: string;
@@ -16,9 +15,8 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
   const [isGenerating, setIsGenerating] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const { tokenData, canGenerate, tokensUsed, tokensRemaining, refreshTokens } = useTokens();
 
-  const generateStory = async () => {
+  const generateMockStory = async () => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -28,117 +26,79 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
       return;
     }
 
-    if (!canGenerate) {
-      toast({
-        title: "Token limit exceeded",
-        description: "You have reached your daily limit of 5 stories. Please try again after 24 hours.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsGenerating(true);
     
     try {
-      console.log('Calling generate-story function...');
-      
-      const { data, error: invokeError } = await supabase.functions.invoke('generate-story', {
-        body: {
-          location,
-          user_id: user.id
-        }
-      });
-
-      if (invokeError) {
-        console.error('Supabase function error:', invokeError);
-        
-        // Parse the error details from the response context body
-        let errorTitle = "Generation failed";
-        let errorMessage = "Failed to generate story. Please try again.";
-        
-        try {
-          // Access the error body from the context property
-          const errorBody = invokeError.context?.body ? JSON.parse(invokeError.context.body) : null;
-          
-          if (errorBody?.error) {
-            switch (errorBody.error) {
-              case 'Token limit exceeded':
-                errorTitle = "Daily limit reached";
-                errorMessage = errorBody.message || "You have reached your daily story limit.";
-                refreshTokens();
-                break;
-              case 'Rate limit exceeded':
-                errorTitle = "Rate limit exceeded";
-                errorMessage = "OpenAI API rate limit exceeded. Please try again in a few minutes.";
-                break;
-              case 'API key invalid':
-                errorTitle = "Configuration error";
-                errorMessage = "There's an issue with the API configuration. Please contact support.";
-                break;
-              case 'Quota exceeded':
-                errorTitle = "Service temporarily unavailable";
-                errorMessage = "The AI service quota has been exceeded. Please contact support.";
-                break;
-              default:
-                errorTitle = "Generation failed";
-                errorMessage = errorBody.message || "Failed to generate story. Please try again.";
-            }
+      // Mock story data
+      const storyData = {
+        title: `The Mystery of ${location}`,
+        segments: [
+          {
+            id: 1,
+            text: `In the heart of ${location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you. The air is thick with mystery and possibility.`,
+            image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80",
+            choices: [
+              { id: 'A', text: "Explore the mysterious alleyways", nextSegment: 2 },
+              { id: 'B', text: "Visit the local marketplace", nextSegment: 3 },
+              { id: 'C', text: "Seek out the town's historian", nextSegment: 4 }
+            ]
+          },
+          {
+            id: 2,
+            text: "The narrow alleyways reveal hidden murals and forgotten doorways. Each step takes you deeper into the soul of the city, where ancient stories come alive in the shadows.",
+            image: "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop&q=80",
+            choices: [
+              { id: 'A', text: "Follow the murals to their source", nextSegment: 5 },
+              { id: 'B', text: "Knock on an ancient door", nextSegment: 6 }
+            ]
           }
-        } catch (parseError) {
-          console.error('Error accessing function error details:', parseError);
-          // Use the generic error message if we can't parse the error body
-          errorTitle = "Generation failed";
-          errorMessage = "An unexpected error occurred. Please try again.";
-        }
+        ],
+        culturalInsights: [
+          `${location} has a rich cultural heritage spanning centuries.`,
+          "Local traditions are deeply woven into daily life.",
+          "The architecture tells stories of different historical periods."
+        ]
+      };
 
-        toast({
-          title: errorTitle,
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return;
+      // Save story to database
+      const { data: savedStory, error: saveError } = await supabase
+        .from('stories')
+        .insert({
+          user_id: user.id,
+          title: storyData.title,
+          location: location,
+          content: storyData,
+          cultural_insights: storyData.culturalInsights,
+          image_urls: storyData.segments.map(s => s.image),
+          is_public: true
+        })
+        .select()
+        .single();
+
+      if (saveError) {
+        throw saveError;
       }
 
-      console.log('Story generated successfully:', data);
-      
-      const story = {
-        id: data.story.id,
-        location,
-        title: data.story.title,
-        segments: data.story.segments,
-        culturalInsights: data.story.culturalInsights
-      };
-      
-      onStoryGenerated(story);
-      refreshTokens();
-      
+      onStoryGenerated({
+        id: savedStory.id,
+        ...storyData
+      });
+
       toast({
         title: "Story created!",
-        description: `Your magical tale has been woven! ${data.tokens_remaining} stories remaining today.`,
+        description: "Your magical tale has been woven!",
       });
 
     } catch (error) {
       console.error('Error generating story:', error);
       toast({
         title: "Generation failed",
-        description: "An unexpected error occurred. Please try again.",
+        description: "Failed to create story. Please try again.",
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const handleGenerateClick = () => {
-    if (!canGenerate) {
-      toast({
-        title: "Token limit exceeded",
-        description: "You have reached your daily limit of 5 stories. Please try again after 24 hours.",
-        variant: "destructive",
-      });
-      return;
-    }
-    generateStory();
   };
 
   if (isGenerating) {
@@ -162,15 +122,15 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
           <div className="flex justify-center space-x-4 text-sm text-white/50">
             <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse"></div>
-              <span>Analyzing location</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-300"></div>
               <span>Creating narrative</span>
             </div>
             <div className="flex items-center space-x-1">
+              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-300"></div>
+              <span>Weaving magic</span>
+            </div>
+            <div className="flex items-center space-x-1">
               <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-700"></div>
-              <span>Generating visuals</span>
+              <span>Adding details</span>
             </div>
           </div>
         </div>
@@ -186,26 +146,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
             Discover the Stories of {location.split(',')[0]}
           </h3>
           <p className="text-white/80">
-            Let AI weave an enchanting tale based on the rich history and culture of your chosen location
-          </p>
-        </div>
-
-        {/* Token Status */}
-        <div className="glass-card p-4 space-y-2">
-          <div className="flex items-center justify-center space-x-2">
-            <Clock className="w-4 h-4 text-mystical-accent" />
-            <span className="text-mystical-accent font-semibold">
-              Daily Stories: {tokensUsed}/5
-            </span>
-          </div>
-          <div className="w-full bg-mystical-primary/30 rounded-full h-2">
-            <div 
-              className="bg-mystical-accent rounded-full h-2 transition-all duration-300"
-              style={{ width: `${(tokensUsed / 5) * 100}%` }}
-            ></div>
-          </div>
-          <p className="text-white/60 text-xs">
-            {tokensRemaining} stories remaining today
+            Let us weave an enchanting tale based on the rich history and culture of your chosen location
           </p>
         </div>
         
@@ -217,8 +158,8 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
           </div>
           <div className="glass-card p-4 space-y-2">
             <Image className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">AI Generated</h4>
-            <p className="text-white/70">Unique stories created by artificial intelligence</p>
+            <h4 className="font-semibold text-mystical-accent">Rich Imagery</h4>
+            <p className="text-white/70">Beautiful visuals enhance your journey</p>
           </div>
           <div className="glass-card p-4 space-y-2">
             <Share className="w-6 h-6 text-mystical-accent mx-auto" />
@@ -228,23 +169,12 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
         </div>
 
         <Button 
-          onClick={handleGenerateClick}
-          className={`text-lg px-8 py-3 ${
-            canGenerate 
-              ? "mystical-button" 
-              : "bg-gray-600 text-gray-400 cursor-not-allowed hover:bg-gray-600"
-          }`}
-          disabled={!canGenerate}
+          onClick={generateMockStory}
+          className="text-lg px-8 py-3 mystical-button"
         >
           <Sparkles className="w-5 h-5 mr-2" />
-          {canGenerate ? "Generate My Story" : "Token Limit Exceeded"}
+          Generate My Story
         </Button>
-        
-        {!canGenerate && (
-          <p className="text-red-400 text-sm">
-            Token limit exceeded. Rollback after 24 hrs.
-          </p>
-        )}
       </div>
     </Card>
   );
