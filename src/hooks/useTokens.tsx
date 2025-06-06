@@ -3,6 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+interface TokenData {
+  tokens_used: number;
+  tokens_remaining: number;
+  can_generate: boolean;
+  next_reset: string;
+}
+
 export const useTokens = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -21,7 +28,7 @@ export const useTokens = () => {
         throw error;
       }
       
-      return data;
+      return data as TokenData;
     },
     enabled: !!user
   });
