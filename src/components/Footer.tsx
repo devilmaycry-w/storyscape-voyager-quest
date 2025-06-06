@@ -36,7 +36,7 @@ const Footer = () => {
               href="https://www.linkedin.com/in/ankrit-maity-6a37a6351/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-400 hover:underline"
+              className="text-yellow-400 hover:underline"
             >
               Ankrit Maity
             </a>
