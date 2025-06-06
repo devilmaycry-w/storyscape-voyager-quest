@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { ArrowUp, Share, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Share, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +23,7 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
   const handleChoice = async (choice: any) => {
     if (choice.nextSegment && !isTransitioning) {
       setIsTransitioning(true);
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for exit animation
+      await new Promise(resolve => setTimeout(resolve, 500));
       setCurrentSegment(choice.nextSegment);
       setStoryPath([...storyPath, choice.nextSegment]);
       setIsTransitioning(false);
@@ -46,7 +47,6 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
         });
       }
     } catch (error) {
-      // Silently handle share/clipboard errors and fall back to clipboard
       try {
         await navigator.clipboard.writeText(text + ' ' + window.location.href);
         toast({

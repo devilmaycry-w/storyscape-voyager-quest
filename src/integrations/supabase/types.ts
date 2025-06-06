@@ -160,43 +160,46 @@ export type Database = {
       }
       stories: {
         Row: {
-          audio_url: string | null
           content: Json
           created_at: string | null
           cultural_insights: string[] | null
+          generation_prompt: string | null
           id: string
           image_urls: string[] | null
           is_public: boolean | null
           location: string
           title: string
+          tokens_used: number | null
           updated_at: string | null
           upvotes: number | null
           user_id: string
         }
         Insert: {
-          audio_url?: string | null
           content: Json
           created_at?: string | null
           cultural_insights?: string[] | null
+          generation_prompt?: string | null
           id?: string
           image_urls?: string[] | null
           is_public?: boolean | null
           location: string
           title: string
+          tokens_used?: number | null
           updated_at?: string | null
           upvotes?: number | null
           user_id: string
         }
         Update: {
-          audio_url?: string | null
           content?: Json
           created_at?: string | null
           cultural_insights?: string[] | null
+          generation_prompt?: string | null
           id?: string
           image_urls?: string[] | null
           is_public?: boolean | null
           location?: string
           title?: string
+          tokens_used?: number | null
           updated_at?: string | null
           upvotes?: number | null
           user_id?: string
@@ -267,14 +270,49 @@ export type Database = {
           },
         ]
       }
+      user_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          last_reset_date: string
+          tokens_used: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_reset_date?: string
+          tokens_used?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_reset_date?: string
+          tokens_used?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      check_and_update_tokens: {
+        Args: { user_id_param: string }
+        Returns: Json
+      }
       decrement_upvotes: {
         Args: { story_id: string }
         Returns: undefined
+      }
+      increment_tokens: {
+        Args: { user_id_param: string }
+        Returns: boolean
       }
       increment_upvotes: {
         Args: { story_id: string }
