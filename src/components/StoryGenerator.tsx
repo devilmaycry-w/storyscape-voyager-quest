@@ -42,50 +42,56 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     try {
       console.log('Calling generate-story function...');
       
-      const { data, error } = await supabase.functions.invoke('generate-story', {
+      const { data, error: invokeError } = await supabase.functions.invoke('generate-story', {
         body: {
           location,
           user_id: user.id
         }
       });
 
-      if (error) {
-        console.error('Supabase function error:', error);
-        throw new Error(error.message || 'Failed to generate story');
-      }
-
-      if (data.error) {
-        if (data.error === 'Token limit exceeded') {
-          toast({
-            title: "Daily limit reached",
-            description: data.message,
-            variant: "destructive",
-          });
-          refreshTokens();
-          return;
-        } else if (data.error === 'Rate limit exceeded') {
-          toast({
-            title: "Rate limit exceeded",
-            description: "OpenAI API rate limit exceeded. Please try again in a few minutes.",
-            variant: "destructive",
-          });
-          return;
-        } else if (data.error === 'API key invalid') {
-          toast({
-            title: "Configuration error",
-            description: "There's an issue with the API configuration. Please contact support.",
-            variant: "destructive",
-          });
-          return;
-        } else if (data.error === 'Quota exceeded') {
-          toast({
-            title: "Service temporarily unavailable",
-            description: "The AI service quota has been exceeded. Please contact support.",
-            variant: "destructive",
-          });
-          return;
+      if (invokeError) {
+        console.error('Supabase function error:', invokeError);
+        
+        // Parse the error details from the response body
+        let errorTitle = "Generation failed";
+        let errorMessage = "Failed to generate story. Please try again.";
+        
+        try {
+          const errorBody = JSON.parse(invokeError.message);
+          if (errorBody.error) {
+            switch (errorBody.error) {
+              case 'Token limit exceeded':
+                errorTitle = "Daily limit reached";
+                errorMessage = errorBody.message || "You have reached your daily story limit.";
+                refreshTokens();
+                break;
+              case 'Rate limit exceeded':
+                errorTitle = "Rate limit exceeded";
+                errorMessage = "OpenAI API rate limit exceeded. Please try again in a few minutes.";
+                break;
+              case 'API key invalid':
+                errorTitle = "Configuration error";
+                errorMessage = "There's an issue with the API configuration. Please contact support.";
+                break;
+              case 'Quota exceeded':
+                errorTitle = "Service temporarily unavailable";
+                errorMessage = "The AI service quota has been exceeded. Please contact support.";
+                break;
+              default:
+                errorTitle = "Generation failed";
+                errorMessage = errorBody.message || "Failed to generate story. Please try again.";
+            }
+          }
+        } catch (parseError) {
+          console.error('Error parsing function error response:', parseError);
         }
-        throw new Error(data.error);
+
+        toast({
+          title: errorTitle,
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
       }
 
       console.log('Story generated successfully:', data);
@@ -110,7 +116,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
       console.error('Error generating story:', error);
       toast({
         title: "Generation failed",
-        description: error.message || "Failed to generate story. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
