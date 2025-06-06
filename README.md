@@ -19,7 +19,7 @@ Overview:
 
 1. Frontend: Built with a no-code platform for responsive, mobile-first design.
 2. AI: Generates stories and fallback media based on location inputs.
-3. Integration: Google Maps Places API for location data (*soon*).
+3. Integration: leaflet Maps Places API for location data (*solid*).
 4. Supabase Database: Stores user profiles, stories, and points etc.
 
 ---
