@@ -1,4 +1,3 @@
-
 import { Users, ArrowUp, MapPin, Eye } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,11 @@ interface StoryCardProps {
   story: Story;
   onUpvote: (storyId: string) => void;
   onRead: (story: Story) => void;
+  onStop: () => void;
+  isReading: boolean;
 }
 
-const StoryCard = ({ story, onUpvote, onRead }: StoryCardProps) => {
+const StoryCard = ({ story, onUpvote, onRead, onStop, isReading }: StoryCardProps) => {
   return (
     <Card className="story-card overflow-hidden cursor-pointer group">
       <div className="relative">
@@ -62,11 +63,11 @@ const StoryCard = ({ story, onUpvote, onRead }: StoryCardProps) => {
             <Button 
               size="sm" 
               variant="ghost"
-              onClick={() => onRead(story)}
+              onClick={() => isReading ? onStop() : onRead(story)}
               className="text-mystical-accent hover:bg-mystical-accent/10"
             >
               <Eye className="w-4 h-4 mr-1" />
-              Read
+              {isReading ? "Stop" : "Read"}
             </Button>
           </div>
         </div>
