@@ -1,13 +1,41 @@
 
 import { useState } from "react";
-import { Share, ChevronLeft } from "lucide-react";
+import { Share, ChevronLeft, AlertTriangle } from "lucide-react"; // Added AlertTriangle
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
+
+// Re-using a simplified Story type, ensure it matches the actual data structure
+interface StorySegmentChoice {
+  id: string;
+  text: string;
+  nextSegment: number;
+}
+interface StorySegment {
+  id: number;
+  text: string;
+  image: string;
+  choices: StorySegmentChoice[];
+}
+interface Story {
+  id?: string; // id might not be present if story is just generated and not saved yet
+  title: string;
+  location: string;
+  segments: StorySegment[];
+  culturalInsights: string[];
+  used_fallback_story?: boolean;
+  // Potentially other fields like ai_generated_story, user_id etc.
+}
 
 interface StoryViewerProps {
-  story: any;
+  story: Story; // Now using the more specific Story type
   onBack: () => void;
 }
 
@@ -140,9 +168,23 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
       </div>
 
       <div className="text-center space-y-2">
-        <h2 className="text-2xl md:text-3xl font-mystical text-mystical-accent glow-text">
-          {story.title}
-        </h2>
+        <div className="flex items-center justify-center space-x-2">
+          <h2 className="text-2xl md:text-3xl font-mystical text-mystical-accent glow-text">
+            {story.title}
+          </h2>
+          {story.used_fallback_story && (
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger>
+                  <AlertTriangle className="w-5 h-5 text-yellow-400" />
+                </TooltipTrigger>
+                <TooltipContent className="bg-black text-white border-yellow-400">
+                  <p>This story uses fallback content as AI generation failed or was unavailable.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
         <div className="flex items-center justify-center space-x-2 text-mystical-accent/80 text-sm">
           <span>{showFullStory ? "Full Story View" : `Chapter ${storyPath.length}`}</span>
           <span>•</span>

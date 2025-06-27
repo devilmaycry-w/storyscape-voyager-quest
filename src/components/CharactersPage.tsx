@@ -1,8 +1,14 @@
 
 import { useState, useEffect } from "react";
-import { Plus, User, Wand2, Trash2, Edit } from "lucide-react";
+import { Plus, User, Wand2, Trash2, Edit, AlertTriangle } from "lucide-react"; // Added AlertTriangle
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Import Tooltip components
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +25,11 @@ interface Character {
   stats: any;
   voice_id: string;
   created_at: string;
+  // New fields from schema
+  generation_prompt?: string | null;
+  ai_generated_character?: boolean;
+  character_error_log?: string | null;
+  used_fallback_character?: boolean;
 }
 
 const CharactersPage = () => {
@@ -174,7 +185,21 @@ const CharactersPage = () => {
 
                   {character.background_story && (
                     <div>
-                      <h4 className="text-white/80 text-sm font-semibold mb-1">Background</h4>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="text-white/80 text-sm font-semibold">Background</h4>
+                        {character.used_fallback_character && (
+                          <TooltipProvider>
+                            <Tooltip delayDuration={100}>
+                              <TooltipTrigger>
+                                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400" />
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-black text-white border-yellow-400">
+                                <p>The AI-generated background story failed. Fallback or manually entered content is shown.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       <p className="text-white/60 text-xs line-clamp-3">
                         {character.background_story}
                       </p>

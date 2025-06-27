@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { User, Wand2, Palette, BookOpen, Save } from "lucide-react";
+import { User, Wand2, Palette, BookOpen, Save, Sparkles } from "lucide-react"; // Added Sparkles for AI button
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { generateText } from "@/integrations/openai/client"; // Import OpenAI client
 
 interface CharacterCreatorProps {
   isOpen: boolean;
@@ -44,6 +45,14 @@ const CharacterCreator = ({ isOpen, onClose, onCharacterCreated }: CharacterCrea
     voice_id: "Alice"
   });
   const [loading, setLoading] = useState(false);
+  const [isGeneratingBackground, setIsGeneratingBackground] = useState(false);
+  // State to store AI generation metadata
+  const [aiMetadata, setAiMetadata] = useState({
+    generation_prompt: null as string | null,
+    ai_generated_character: false, // Specifically for background story part
+    character_error_log: null as string | null,
+    used_fallback_character: false, // Specifically for background story part
+  });
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -76,7 +85,12 @@ const CharacterCreator = ({ isOpen, onClose, onCharacterCreated }: CharacterCrea
           personality_traits: character.personality_traits,
           background_story: character.background_story,
           stats: character.stats,
-          voice_id: character.voice_id
+          voice_id: character.voice_id,
+          // Add AI metadata fields
+          generation_prompt: aiMetadata.generation_prompt,
+          ai_generated_character: aiMetadata.ai_generated_character,
+          character_error_log: aiMetadata.character_error_log,
+          used_fallback_character: aiMetadata.used_fallback_character,
         })
         .select()
         .single();
@@ -112,6 +126,64 @@ const CharacterCreator = ({ isOpen, onClose, onCharacterCreated }: CharacterCrea
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateBackground = async () => {
+    if (!character.name && !character.description) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter character name and description before generating a background.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingBackground(true);
+    let newBackground = "";
+    let currentAiMetadata = {
+      generation_prompt: null as string | null,
+      ai_generated_character: false,
+      character_error_log: null as string | null,
+      used_fallback_character: false,
+    };
+
+    const personalityString = Object.entries(character.personality_traits)
+      .map(([trait, value]) => `${trait}: ${value}/10`)
+      .join(", ");
+
+    currentAiMetadata.generation_prompt = `Generate a concise and compelling background story (around 100-150 words) for a character with the following details:
+Name: ${character.name || "Unnamed"}
+Description: ${character.description || "Not specified"}
+Personality Traits: ${personalityString || "Not specified"}
+Focus on creating an intriguing origin or a defining past event.`;
+
+    try {
+      const aiResponse = await generateText(currentAiMetadata.generation_prompt);
+      if (aiResponse) {
+        newBackground = aiResponse;
+        currentAiMetadata.ai_generated_character = true;
+        toast({
+          title: "Background Generated!",
+          description: "AI has drafted a background story for your character.",
+        });
+      } else {
+        throw new Error("AI service returned no response.");
+      }
+    } catch (error) {
+      console.error("Error generating character background:", error);
+      currentAiMetadata.character_error_log = error instanceof Error ? error.message : String(error);
+      currentAiMetadata.used_fallback_character = true;
+      newBackground = "The mists of time have clouded this character's past. Perhaps you can unveil their story? (AI generation failed, please write manually or try again later.)";
+      toast({
+        title: "AI Background Failed",
+        description: "Using a fallback. Please write manually or try again.",
+        variant: "default",
+      });
+    } finally {
+      setCharacter(prev => ({ ...prev, background_story: newBackground }));
+      setAiMetadata(prev => ({ ...prev, ...currentAiMetadata })); // Merge new AI metadata
+      setIsGeneratingBackground(false);
     }
   };
 
@@ -248,12 +320,35 @@ const CharacterCreator = ({ isOpen, onClose, onCharacterCreated }: CharacterCrea
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-white/80 mb-2">Background Story</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-white/80">Background Story</label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateBackground}
+                    disabled={isGeneratingBackground}
+                    className="text-xs mystical-button-outline"
+                  >
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    {isGeneratingBackground ? "Generating..." : "Generate with AI"}
+                  </Button>
+                </div>
                 <Textarea
                   value={character.background_story}
-                  onChange={(e) => setCharacter({ ...character, background_story: e.target.value })}
-                  placeholder="Tell your character's backstory..."
+                  onChange={(e) => {
+                    setCharacter({ ...character, background_story: e.target.value });
+                    // If user types, assume it's not AI generated or fallback anymore for this specific field
+                    setAiMetadata(prev => ({
+                        ...prev,
+                        ai_generated_character: false,
+                        used_fallback_character: false,
+                        character_error_log: null,
+                        // generation_prompt could be kept or cleared depending on desired behavior
+                    }));
+                  }}
+                  placeholder="Tell your character's backstory, or generate one with AI..."
                   className="glass-card border-mystical-accent/30 min-h-[120px]"
+                  disabled={isGeneratingBackground}
                 />
               </div>
               <div>

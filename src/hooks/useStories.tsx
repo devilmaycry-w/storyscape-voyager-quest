@@ -18,6 +18,11 @@ interface Story {
   user_details?: {
     username: string;
   };
+  // New fields from schema
+  generation_prompt?: string | null;
+  ai_generated_story?: boolean;
+  story_error_log?: string | null;
+  used_fallback_story?: boolean;
 }
 
 export const useStories = (filter: string) => {
@@ -36,7 +41,9 @@ export const useStories = (filter: string) => {
           created_at,
           image_urls,
           content,
-          user_id
+          user_id,
+          used_fallback_story,
+          ai_generated_story
         `)
         .eq('is_public', true);
 
