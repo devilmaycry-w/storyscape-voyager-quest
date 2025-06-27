@@ -144,8 +144,14 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         description: `Now reading "${story.title}"`,
       });
 
-      // Speak the story aloud using Web Speech API
-      speakStoryWithWebSpeech(story.text);
+      // Use the most relevant story text for reading aloud:
+      const storyText =
+        story.content?.segments?.[0]?.text ||
+        story.text ||
+        story.title ||
+        "No story text available.";
+
+      speakStoryWithWebSpeech(storyText);
 
     } catch (error) {
       console.error('Error recording read:', error);
