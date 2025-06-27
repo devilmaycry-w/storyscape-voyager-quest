@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +10,34 @@ import StoriesGrid from "./community/StoriesGrid";
 
 interface CommunityStoriesProps {
   isVisible: boolean;
+}
+
+// Web Speech API helper: speak text with an expressive male voice
+function speakStoryWithWebSpeech(text: string) {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    // Try to select a male, expressive English voice
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice = voices.find(
+      v => v.lang.startsWith('en') && v.name.toLowerCase().includes('male')
+    );
+    if (!selectedVoice) {
+      selectedVoice =
+        voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('david')) ||
+        voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('alex')) ||
+        voices.find(v => v.lang.startsWith('en') && v.name.toLowerCase().includes('english')) ||
+        voices.find(v => v.lang.startsWith('en')) ||
+        voices[0];
+    }
+    if (selectedVoice) utterance.voice = selectedVoice;
+    utterance.pitch = 1; // normal pitch
+    utterance.rate = 1;  // normal rate
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  } else {
+    alert('Sorry, your browser does not support speech synthesis.');
+  }
 }
 
 const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
@@ -116,6 +143,10 @@ const CommunityStories = ({ isVisible }: CommunityStoriesProps) => {
         title: "Story opened!",
         description: `Now reading "${story.title}"`,
       });
+
+      // Speak the story aloud using Web Speech API
+      speakStoryWithWebSpeech(story.text);
+
     } catch (error) {
       console.error('Error recording read:', error);
     }
