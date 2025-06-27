@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { useQueryClient } from "@tanstack/react-query";
 import StoryCard from "./StoryCard";
@@ -10,9 +9,11 @@ interface StoriesGridProps {
   error: Error | null;
   onUpvote: (storyId: string) => void;
   onRead: (story: Story) => void;
+  onStop: () => void;
+  readingStoryId: string | null;
 }
 
-const StoriesGrid = ({ stories, isLoading, error, onUpvote, onRead }: StoriesGridProps) => {
+const StoriesGrid = ({ stories, isLoading, error, onUpvote, onRead, onStop, readingStoryId }: StoriesGridProps) => {
   const queryClient = useQueryClient();
 
   if (isLoading) {
@@ -55,6 +56,8 @@ const StoriesGrid = ({ stories, isLoading, error, onUpvote, onRead }: StoriesGri
           story={story}
           onUpvote={onUpvote}
           onRead={onRead}
+          onStop={onStop}
+          isReading={readingStoryId === story.id}
         />
       ))}
     </div>
