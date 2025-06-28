@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Sparkles, Image, Share, Clock } from "lucide-react";
+import { Loader2, Sparkles, Image, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,7 +37,7 @@ const generateStoryWithAI = async (location: string) => {
       messages: [
         {
           role: "user",
-          content: `Create a short, interactive story about ${location}. Include cultural insights, mystery, and decision points. Format the story as a title, a main segment with about 3-5 sentences, and provide three choices for what the reader could do next.`,
+          content: `Write a short, interactive story about ${location}. Include mystery, cultural insights, and decision points. Format as a title line, then 3-5 sentences of story, then three choices each on its own line. Do NOT include any images.`,
         },
       ],
     };
@@ -50,45 +50,57 @@ const generateStoryWithAI = async (location: string) => {
 
     const responseData = await response.json();
 
-    // Check if choices exist and are non-empty
     if (!responseData.choices || responseData.choices.length === 0) {
       throw new Error("No choices returned from AI");
     }
 
-    const storyText = responseData.choices[0]?.message?.content || "";
+    const storyContent = responseData.choices[0]?.message?.content || "";
+    if (!storyContent) {
+      throw new Error("No content returned from AI");
+    }
 
-    // Very simple parsing: split on lines to extract title, text, and choices.
-    // You can replace this with more robust parsing if needed.
-    const lines = storyText.split("\n").map(l => l.trim()).filter(Boolean);
+    // Parse AI response into title, text, and choices
+    // Expected format (example):
+    // Title: The Mystery of Paris
+    // [story...]
+    // A. Explore the mysterious alleyways
+    // B. Visit the local marketplace
+    // C. Seek out the town's historian
 
+    const lines = storyContent.split("\n").map(l => l.trim()).filter(Boolean);
     let title = `The Mystery of ${location}`;
     let text = "";
-    let choices: { id: string; text: string; nextSegment: number }[] = [
+    let choices = [
       { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
       { id: "B", text: "Visit the local marketplace", nextSegment: 3 },
       { id: "C", text: "Seek out the town's historian", nextSegment: 4 },
     ];
 
-    // Attempt to extract title and choices from AI response
-    if (lines.length > 0) {
-      if (/^title:/i.test(lines[0])) {
-        title = lines[0].replace(/^title:/i, "").trim();
-        text = lines.slice(1).join(" ");
-      } else {
-        title = lines[0];
-        text = lines.slice(1).join(" ");
-      }
-      // Try to find choices in the lines (optional, fallback if not found)
-      const choiceLines = lines.filter(l => /^-|\d+\./.test(l) || /^[A-Z]\./.test(l));
-      if (choiceLines.length >= 3) {
-        choices = choiceLines.slice(0, 3).map((l, i) => ({
-          id: String.fromCharCode(65 + i),
-          text: l.replace(/^[-\dA-Z. ]+/, "").trim(),
-          nextSegment: i + 2,
-        }));
-      }
+    // Try to extract Title
+    if (lines[0]?.toLowerCase().startsWith("title:")) {
+      title = lines[0].replace(/^title:\s*/i, "");
+      lines.shift();
+    } else if (lines[0]) {
+      title = lines[0];
+      lines.shift();
     }
 
+    // Separate story and choices
+    const choiceLines = lines.filter(l =>
+      /^[a-cA-C][\.\:]/.test(l) || l.startsWith("- ") || l.match(/^(1\.|2\.|3\.)/)
+    );
+    const storyLines = lines.filter(l => !choiceLines.includes(l));
+    text = storyLines.join(" ");
+
+    if (choiceLines.length >= 3) {
+      choices = choiceLines.slice(0, 3).map((l, i) => ({
+        id: String.fromCharCode(65 + i),
+        text: l.replace(/^([a-cA-C][\.\:]|\d+\.)\s*/, ""),
+        nextSegment: i + 2,
+      }));
+    }
+
+    // Always attach a random image (AI does not generate images)
     return {
       title,
       segments: [
@@ -162,6 +174,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     setIsGenerating(true);
 
     try {
+      // Attempt AI generation first
       let storyData = await generateStoryWithAI(location);
 
       // Fallback to mock generation if AI fails
@@ -228,20 +241,6 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
               Gathering the mystical threads of {location}
             </p>
           </div>
-          <div className="flex justify-center space-x-4 text-sm text-white/50">
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse"></div>
-              <span>Creating narrative</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-300"></div>
-              <span>Weaving magic</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-700"></div>
-              <span>Adding details</span>
-            </div>
-          </div>
         </div>
       </Card>
     );
@@ -252,32 +251,14 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
       <div className="space-y-6">
         <div className="space-y-2">
           <h3 className="text-2xl font-mystical text-mystical-accent glow-text">
-            Discover the Stories of {location.split(',')[0]}
+            Discover the Stories of {location.split(",")[0]}
           </h3>
           <p className="text-white/80">
             Let us weave an enchanting tale based on the rich history and culture of your chosen location
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="glass-card p-4 space-y-2">
-            <Sparkles className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Interactive Story</h4>
-            <p className="text-white/70">Make choices that shape your adventure</p>
-          </div>
-          <div className="glass-card p-4 space-y-2">
-            <Image className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Rich Imagery</h4>
-            <p className="text-white/70">Beautiful visuals enhance your journey</p>
-          </div>
-          <div className="glass-card p-4 space-y-2">
-            <Share className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Cultural Insights</h4>
-            <p className="text-white/70">Learn fascinating facts about the location</p>
-          </div>
-        </div>
-
-        <Button 
+        <Button
           onClick={generateStory}
           className="text-lg px-8 py-3 mystical-button"
         >
