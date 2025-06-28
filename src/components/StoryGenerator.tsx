@@ -16,7 +16,104 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // List of random Unsplash images
+  const randomImages = [
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=400&h=300&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1533055640609-24b498cdfd4f?w=400&h=300&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=300&fit=crop&q=80",
+  ];
+
+  // Function to get a random image from the list
+  const getRandomImage = () => {
+    const randomIndex = Math.floor(Math.random() * randomImages.length);
+    return randomImages[randomIndex];
+  };
+
+  const generateStoryWithAI = async () => {
+    try {
+      const url = "https://api.chatanywhere.tech/v1/chat/completions";
+      const headers = {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY}`, // Use your actual API key here
+        "Content-Type": "application/json",
+      };
+
+      const data = {
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "user",
+            content: `Create a short, interactive story about ${location}. Include cultural insights, mystery, and decision points.`,
+          },
+        ],
+      };
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(data),
+      });
+
+      const responseData = await response.json();
+
+      const storyContent = responseData.choices[0]?.message?.content || "";
+      if (!storyContent) {
+        throw new Error("No content returned from AI");
+      }
+
+      // Parse the AI response into segments
+      return {
+        title: `The Mystery of ${location}`,
+        segments: [
+          {
+            id: 1,
+            text: storyContent, // Entire AI-generated story content
+            image: getRandomImage(),
+            choices: [
+              { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
+              { id: "B", text: "Visit the local marketplace", nextSegment: 3 },
+              { id: "C", text: "Seek out the town's historian", nextSegment: 4 },
+            ],
+          },
+        ],
+        culturalInsights: [
+          `${location} has a rich cultural heritage spanning centuries.`,
+          "Local traditions are deeply woven into daily life.",
+          "The architecture tells stories of different historical periods.",
+        ],
+      };
+    } catch (error) {
+      console.error("Error generating story with AI:", error);
+      return null;
+    }
+  };
+
   const generateMockStory = async () => {
+    // Mock story data
+    return {
+      title: `The Mystery of ${location}`,
+      segments: [
+        {
+          id: 1,
+          text: `In the heart of ${location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you. The air is thick with mystery and possibility.`,
+          image: getRandomImage(),
+          choices: [
+            { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
+            { id: "B", text: "Visit the local marketplace", nextSegment: 3 },
+            { id: "C", text: "Seek out the town's historian", nextSegment: 4 },
+          ],
+        },
+      ],
+      culturalInsights: [
+        `${location} has a rich cultural heritage spanning centuries.`,
+        "Local traditions are deeply woven into daily life.",
+        "The architecture tells stories of different historical periods.",
+      ],
+    };
+  };
+
+  const generateStory = async () => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -27,50 +124,27 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     }
 
     setIsGenerating(true);
-    
+
     try {
-      // Mock story data
-      const storyData = {
-        title: `The Mystery of ${location}`,
-        segments: [
-          {
-            id: 1,
-            text: `In the heart of ${location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you. The air is thick with mystery and possibility.`,
-            image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80",
-            choices: [
-              { id: 'A', text: "Explore the mysterious alleyways", nextSegment: 2 },
-              { id: 'B', text: "Visit the local marketplace", nextSegment: 3 },
-              { id: 'C', text: "Seek out the town's historian", nextSegment: 4 }
-            ]
-          },
-          {
-            id: 2,
-            text: "The narrow alleyways reveal hidden murals and forgotten doorways. Each step takes you deeper into the soul of the city, where ancient stories come alive in the shadows.",
-            image: "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop&q=80",
-            choices: [
-              { id: 'A', text: "Follow the murals to their source", nextSegment: 5 },
-              { id: 'B', text: "Knock on an ancient door", nextSegment: 6 }
-            ]
-          }
-        ],
-        culturalInsights: [
-          `${location} has a rich cultural heritage spanning centuries.`,
-          "Local traditions are deeply woven into daily life.",
-          "The architecture tells stories of different historical periods."
-        ]
-      };
+      // Attempt AI generation first
+      let storyData = await generateStoryWithAI();
+
+      // Fallback to mock generation if AI fails
+      if (!storyData) {
+        storyData = await generateMockStory();
+      }
 
       // Save story to database
       const { data: savedStory, error: saveError } = await supabase
-        .from('stories')
+        .from("stories")
         .insert({
           user_id: user.id,
           title: storyData.title,
           location: location,
           content: storyData,
           cultural_insights: storyData.culturalInsights,
-          image_urls: storyData.segments.map(s => s.image),
-          is_public: true
+          image_urls: storyData.segments?.map((s) => s.image) || [],
+          is_public: true,
         })
         .select()
         .single();
@@ -81,17 +155,16 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
 
       onStoryGenerated({
         id: savedStory.id,
-        location: location, // Explicitly include the location property
-        ...storyData
+        location: location,
+        ...storyData,
       });
 
       toast({
         title: "Story created!",
         description: "Your magical tale has been woven!",
       });
-
     } catch (error) {
-      console.error('Error generating story:', error);
+      console.error("Error generating story:", error);
       toast({
         title: "Generation failed",
         description: "Failed to create story. Please try again.",
@@ -120,20 +193,6 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
               Gathering the mystical threads of {location}
             </p>
           </div>
-          <div className="flex justify-center space-x-4 text-sm text-white/50">
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse"></div>
-              <span>Creating narrative</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-300"></div>
-              <span>Weaving magic</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-2 h-2 bg-mystical-accent rounded-full animate-pulse delay-700"></div>
-              <span>Adding details</span>
-            </div>
-          </div>
         </div>
       </Card>
     );
@@ -144,33 +203,15 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
       <div className="space-y-6">
         <div className="space-y-2">
           <h3 className="text-2xl font-mystical text-mystical-accent glow-text">
-            Discover the Stories of {location.split(',')[0]}
+            Discover the Stories of {location.split(",")[0]}
           </h3>
           <p className="text-white/80">
             Let us weave an enchanting tale based on the rich history and culture of your chosen location
           </p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div className="glass-card p-4 space-y-2">
-            <Sparkles className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Interactive Story</h4>
-            <p className="text-white/70">Make choices that shape your adventure</p>
-          </div>
-          <div className="glass-card p-4 space-y-2">
-            <Image className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Rich Imagery</h4>
-            <p className="text-white/70">Beautiful visuals enhance your journey</p>
-          </div>
-          <div className="glass-card p-4 space-y-2">
-            <Share className="w-6 h-6 text-mystical-accent mx-auto" />
-            <h4 className="font-semibold text-mystical-accent">Cultural Insights</h4>
-            <p className="text-white/70">Learn fascinating facts about the location</p>
-          </div>
-        </div>
 
-        <Button 
-          onClick={generateMockStory}
+        <Button
+          onClick={generateStory}
           className="text-lg px-8 py-3 mystical-button"
         >
           <Sparkles className="w-5 h-5 mr-2" />
