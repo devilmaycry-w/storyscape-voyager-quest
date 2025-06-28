@@ -35,7 +35,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     try {
       const url = "https://api.chatanywhere.tech/v1/chat/completions";
       const headers = {
-        Authorization: Bearer ${process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY},
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY}`,
         "Content-Type": "application/json",
       };
 
@@ -44,7 +44,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
         messages: [
           {
             role: "user",
-            content: Create a short, interactive story about ${location}. Include cultural insights, mystery, and decision points.,
+            content: `Create a short, interactive story about ${location}. Include cultural insights, mystery, and decision points.`,
           },
         ],
       };
@@ -69,7 +69,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
 
       // Parse the AI response into segments
       return {
-        title: The Mystery of ${location},
+        title: `The Mystery of ${location}`,
         segments: [
           {
             id: 1,
@@ -83,7 +83,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
           },
         ],
         culturalInsights: [
-          ${location} has a rich cultural heritage spanning centuries.,
+          `${location} has a rich cultural heritage spanning centuries.`,
           "Local traditions are deeply woven into daily life.",
           "The architecture tells stories of different historical periods.",
         ],
@@ -97,11 +97,11 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
   const generateMockStory = async () => {
     // Mock story data
     return {
-      title: The Mystery of ${location},
+      title: `The Mystery of ${location}`,
       segments: [
         {
           id: 1,
-          text: In the heart of ${location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you. The air is thick with mystery and possibility.,
+          text: `In the heart of ${location}, an adventure unfolds that will change everything. The ancient streets whisper secrets of the past while modern life bustles around you. The air is thick with mystery and possibility.`,
           image: getRandomImage(),
           choices: [
             { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
@@ -111,7 +111,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
         },
       ],
       culturalInsights: [
-        ${location} has a rich cultural heritage spanning centuries.,
+        `${location} has a rich cultural heritage spanning centuries.`,
         "Local traditions are deeply woven into daily life.",
         "The architecture tells stories of different historical periods.",
       ],
@@ -148,7 +148,7 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
           location: location,
           content: storyData,
           cultural_insights: storyData.culturalInsights,
-          image_urls: storyData.segments?.map((s) => s.image) || [],
+          image_urls: storyData.segments?.map((s: any) => s.image) || [],
           is_public: true,
         })
         .select()
@@ -207,7 +207,11 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     <Card className="story-card text-center">
       <div className="space-y-6">
         <div className="space-y-2">
-          <h enchanting tale based on the rich history and culture of your chosen location
+          <h3 className="text-2xl font-mystical text-mystical-accent glow-text">
+            Discover the Stories of {location.split(",")[0]}
+          </h3>
+          <p className="text-white/80">
+            Let us weave an enchanting tale based on the rich history and culture of your chosen location
           </p>
         </div>
 
