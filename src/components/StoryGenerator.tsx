@@ -30,7 +30,7 @@ function getRandomImage() {
  */
 async function generateStoryWithAI(location: string) {
   try {
-    const apiKey = process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY;
+    const apiKey = import.meta.env.VITE_CHATANYWHERE_API_KEY;
     if (!apiKey) throw new Error("API key not set");
 
     const url = "https://api.chatanywhere.tech/v1/chat/completions";
