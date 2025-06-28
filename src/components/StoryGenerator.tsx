@@ -37,7 +37,7 @@ const generateStoryWithAI = async (location: string) => {
       messages: [
         {
           role: "user",
-          content: `Write a short, interactive story about ${location}. Include mystery, cultural insights, and decision points. Format as a title line, then 3-5 sentences of story, then three choices each on its own line. Do NOT include any images.`,
+          content: `Write a short, interactive story about ${location}. Include mystery, cultural insights, and decision points. Format as a title line, then 3-5 sentences of story, then three choices (A., B., C.), each on its own line. Do NOT include any images.`,
         },
       ],
     };
@@ -59,39 +59,39 @@ const generateStoryWithAI = async (location: string) => {
       throw new Error("No content returned from AI");
     }
 
-    // Parse AI response into title, text, and choices
-    // Expected format (example):
-    // Title: The Mystery of Paris
-    // [story...]
-    // A. Explore the mysterious alleyways
-    // B. Visit the local marketplace
-    // C. Seek out the town's historian
+    // Parse the AI response into title, main text, and choices
+    const lines = storyContent.split("\n").map(line => line.trim()).filter(Boolean);
 
-    const lines = storyContent.split("\n").map(l => l.trim()).filter(Boolean);
+    // Extract title
     let title = `The Mystery of ${location}`;
-    let text = "";
-    let choices = [
-      { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
-      { id: "B", text: "Visit the local marketplace", nextSegment: 3 },
-      { id: "C", text: "Seek out the town's historian", nextSegment: 4 },
-    ];
-
-    // Try to extract Title
     if (lines[0]?.toLowerCase().startsWith("title:")) {
-      title = lines[0].replace(/^title:\s*/i, "");
+      title = lines[0].slice(6).trim();
       lines.shift();
     } else if (lines[0]) {
       title = lines[0];
       lines.shift();
     }
 
-    // Separate story and choices
-    const choiceLines = lines.filter(l =>
-      /^[a-cA-C][\.\:]/.test(l) || l.startsWith("- ") || l.match(/^(1\.|2\.|3\.)/)
-    );
-    const storyLines = lines.filter(l => !choiceLines.includes(l));
-    text = storyLines.join(" ");
-
+    // Separate story text and choices
+    let storyLines: string[] = [];
+    let choiceLines: string[] = [];
+    let foundChoices = false;
+    for (const line of lines) {
+      if (/^[a-cA-C][\.\:]/.test(line) || /^\d+\./.test(line)) {
+        foundChoices = true;
+      }
+      if (foundChoices) {
+        choiceLines.push(line);
+      } else {
+        storyLines.push(line);
+      }
+    }
+    const text = storyLines.join(" ");
+    let choices = [
+      { id: "A", text: "Explore the mysterious alleyways", nextSegment: 2 },
+      { id: "B", text: "Visit the local marketplace", nextSegment: 3 },
+      { id: "C", text: "Seek out the town's historian", nextSegment: 4 },
+    ];
     if (choiceLines.length >= 3) {
       choices = choiceLines.slice(0, 3).map((l, i) => ({
         id: String.fromCharCode(65 + i),
@@ -100,7 +100,7 @@ const generateStoryWithAI = async (location: string) => {
       }));
     }
 
-    // Always attach a random image (AI does not generate images)
+    // Always add a random image (AI does NOT generate images)
     return {
       title,
       segments: [
@@ -174,7 +174,6 @@ const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => 
     setIsGenerating(true);
 
     try {
-      // Attempt AI generation first
       let storyData = await generateStoryWithAI(location);
 
       // Fallback to mock generation if AI fails
