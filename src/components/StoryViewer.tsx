@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Share, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,20 @@ import { useToast } from "@/hooks/use-toast";
 interface StoryViewerProps {
   story: any;
   onBack: () => void;
+}
+
+// Add your random stock images and random picker
+const randomImages = [
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=400&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1533055640609-24b498cdfd4f?w=400&h=300&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=300&fit=crop&q=80",
+];
+
+function getRandomImage() {
+  const randomIndex = Math.floor(Math.random() * randomImages.length);
+  return randomImages[randomIndex];
 }
 
 const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
@@ -63,6 +76,10 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
     }
   };
 
+  // Use a stable random image per segment index for full story view for consistency
+  const getSegmentFallbackImage = (index: number) =>
+    randomImages[index % randomImages.length];
+
   const renderFullStory = () => {
     return (
       <div className="space-y-8">
@@ -71,7 +88,7 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
             <div className="space-y-6">
               <div className="relative">
                 <img 
-                  src={segment.image} 
+                  src={segment.image || getSegmentFallbackImage(index)} 
                   alt={`Scene ${index + 1}`}
                   className="w-full h-64 md:h-96 object-cover rounded-lg"
                 />
@@ -166,8 +183,9 @@ const StoryViewer = ({ story, onBack }: StoryViewerProps) => {
                 {segment && (
                   <div className="space-y-6">
                     <div className="relative">
+                      {/* Use a random image if segment.image is missing */}
                       <img 
-                        src={segment.image} 
+                        src={segment.image || getRandomImage()} 
                         alt="Story scene"
                         className="w-full h-64 md:h-96 object-cover rounded-lg"
                       />
