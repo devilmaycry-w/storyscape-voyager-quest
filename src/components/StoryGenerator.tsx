@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2, Sparkles, Image, Share } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
@@ -19,19 +19,25 @@ const randomImages = [
   "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=400&h=300&fit=crop&q=80",
 ];
 
-const getRandomImage = () => {
+function getRandomImage() {
   const randomIndex = Math.floor(Math.random() * randomImages.length);
   return randomImages[randomIndex];
-};
+}
 
-const generateStoryWithAI = async (location: string) => {
+/**
+ * Calls the ChatAnywhere API to generate a story and choices.
+ * Falls back to mock if API is unauthorized, fails, or returns no story.
+ */
+async function generateStoryWithAI(location: string) {
   try {
+    const apiKey = process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY;
+    if (!apiKey) throw new Error("API key not set");
+
     const url = "https://api.chatanywhere.tech/v1/chat/completions";
     const headers = {
-      Authorization: `Bearer ${process.env.NEXT_PUBLIC_CHATANYWHERE_API_KEY}`,
+      Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     };
-
     const data = {
       model: "gpt-3.5-turbo",
       messages: [
@@ -48,8 +54,17 @@ const generateStoryWithAI = async (location: string) => {
       body: JSON.stringify(data),
     });
 
-    const responseData = await response.json();
+    // Handle HTTP errors (like 401 Unauthorized)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`AI API error: ${response.status}`, errorData);
+      throw new Error(
+        errorData?.error?.message ||
+          `AI API error: ${response.status} ${response.statusText}`
+      );
+    }
 
+    const responseData = await response.json();
     if (!responseData.choices || responseData.choices.length === 0) {
       throw new Error("No choices returned from AI");
     }
@@ -60,9 +75,9 @@ const generateStoryWithAI = async (location: string) => {
     }
 
     // Parse the AI response into title, main text, and choices
-    const lines = storyContent.split("\n").map(line => line.trim()).filter(Boolean);
+    const lines = storyContent.split("\n").map((line) => line.trim()).filter(Boolean);
 
-    // Extract title
+    // Extract title from the first line
     let title = `The Mystery of ${location}`;
     if (lines[0]?.toLowerCase().startsWith("title:")) {
       title = lines[0].slice(6).trim();
@@ -77,7 +92,7 @@ const generateStoryWithAI = async (location: string) => {
     let choiceLines: string[] = [];
     let foundChoices = false;
     for (const line of lines) {
-      if (/^[a-cA-C][\.\:]/.test(line) || /^\d+\./.test(line)) {
+      if (/^[a-cA-C][\.\:]/.test(line)) {
         foundChoices = true;
       }
       if (foundChoices) {
@@ -121,9 +136,9 @@ const generateStoryWithAI = async (location: string) => {
     console.error("Error generating story with AI:", error);
     return null;
   }
-};
+}
 
-const generateMockStory = async (location: string) => {
+async function generateMockStory(location: string) {
   // Mock story data
   return {
     title: `The Mystery of ${location}`,
@@ -154,7 +169,7 @@ const generateMockStory = async (location: string) => {
       "The architecture tells stories of different historical periods.",
     ],
   };
-};
+}
 
 const StoryGenerator = ({ location, onStoryGenerated }: StoryGeneratorProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
