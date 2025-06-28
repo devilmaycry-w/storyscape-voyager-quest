@@ -43,8 +43,10 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
   const [isReverseGeocoding, setIsReverseGeocoding] = useState(false);
   const mapRef = useRef<L.Map | null>(null);
   const { toast } = useToast();
+  // Use Vite's environment variable for LocationIQ
+  const apiKey = import.meta.env.VITE_LOCATIONIQ_API_KEY;
 
-  // Search for locations using Nominatim API
+  // Search for locations using LocationIQ API
   const searchLocations = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([]);
@@ -54,16 +56,17 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
     setIsSearching(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`
+        `https://us1.locationiq.com/v1/search?key=${apiKey}&q=${encodeURIComponent(query)}&format=json&limit=5`
       );
+      if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       setSearchResults(data);
     } catch (error) {
       console.error('Search error:', error);
       toast({
-        title: "Search failed",
-        description: "Unable to search locations. Please try again.",
-        variant: "destructive"
+        title: 'Search failed',
+        description: 'Unable to search locations. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsSearching(false);
@@ -75,20 +78,20 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
     setIsReverseGeocoding(true);
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`
+        `https://us1.locationiq.com/v1/reverse?key=${apiKey}&lat=${lat}&lon=${lng}&format=json`
       );
+      if (!response.ok) throw new Error('Reverse geocoding failed');
       const data = await response.json();
-      
-      if (data && data.display_name) {
+      if (data?.display_name) {
         const locationName = data.display_name.split(',').slice(0, 2).join(',').trim();
         setSelectedLocation({ lat, lng, name: locationName });
       }
     } catch (error) {
       console.error('Reverse geocoding error:', error);
       toast({
-        title: "Location lookup failed",
-        description: "Unable to get location details.",
-        variant: "destructive"
+        title: 'Location lookup failed',
+        description: 'Unable to get location details.',
+        variant: 'destructive',
       });
     } finally {
       setIsReverseGeocoding(false);
@@ -104,15 +107,10 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
     const lat = parseFloat(result.lat);
     const lng = parseFloat(result.lon);
     const locationName = result.display_name.split(',').slice(0, 2).join(',').trim();
-    
     setSelectedLocation({ lat, lng, name: locationName });
     setSearchResults([]);
     setSearchQuery('');
-    
-    // Pan map to selected location
-    if (mapRef.current) {
-      mapRef.current.setView([lat, lng], 12);
-    }
+    if (mapRef.current) mapRef.current.setView([lat, lng], 12);
   };
 
   const handleMapClick = (lat: number, lng: number) => {
@@ -130,10 +128,7 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
     const randomLat = (Math.random() - 0.5) * 180;
     const randomLng = (Math.random() - 0.5) * 360;
     reverseGeocode(randomLat, randomLng);
-    
-    if (mapRef.current) {
-      mapRef.current.setView([randomLat, randomLng], 8);
-    }
+    if (mapRef.current) mapRef.current.setView([randomLat, randomLng], 8);
   };
 
   useEffect(() => {
@@ -165,7 +160,6 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
             <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-mystical-accent animate-spin" />
           )}
         </div>
-
         {/* Search Results */}
         {searchResults.length > 0 && (
           <div className="absolute top-full left-0 right-0 mt-2 glass-card border border-mystical-accent/30 rounded-lg overflow-hidden z-10 max-h-60 overflow-y-auto">
@@ -184,7 +178,6 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
           </div>
         )}
       </form>
-
       {/* Action Buttons */}
       <div className="flex gap-2">
         <Button
@@ -202,18 +195,17 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
           </div>
         )}
       </div>
-
       {/* Map Container */}
       <div className="relative">
         <div className="h-96 w-full rounded-lg overflow-hidden border border-mystical-accent/30">
           <MapContainer
-            center={[40.7128, -74.0060]} // Default to New York
+            center={[40.7128, -74.006]}
             zoom={3}
             style={{ height: '100%', width: '100%' }}
             ref={mapRef}
           >
             <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapClickHandler onMapClick={handleMapClick} />
@@ -231,7 +223,6 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
             )}
           </MapContainer>
         </div>
-
         {/* Selected Location Info */}
         {selectedLocation && (
           <div className="mt-4 glass-card p-4 border border-mystical-accent/30 rounded-lg">
@@ -253,7 +244,6 @@ const InteractiveMap = ({ onLocationSelect, onClose }: InteractiveMapProps) => {
           </div>
         )}
       </div>
-
       {/* Instructions */}
       <div className="text-center text-white/60 text-sm">
         <p>Click anywhere on the map to select a location, or search for a specific place above.</p>
